@@ -1,0 +1,36 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper to extract custom claims or fetch user doc (Mocked logic for demo)
+    // In a real app, you would check request.auth.token.role or a users collection.
+    
+    // Allow read/write for all authenticated users during hackathon MVP testing.
+    // In production, this would be locked down per collection.
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // --- PRODUCTION READY EXAMPLES ---
+    
+    // Assets Collection (Production Mode)
+    // match /assets/{assetId} {
+    //   allow read: if isAuthenticated(); // Field Engineers can read
+    //   allow create, update: if isAuthenticated() && (request.auth.token.role == 'Admin' || request.auth.token.role == 'Officer');
+    //   allow delete: if isAuthenticated() && request.auth.token.role == 'Admin';
+    // }
+    
+    // Issues Collection (Production Mode)
+    // match /issues/{issueId} {
+    //   allow read: if isAuthenticated();
+    //   allow create, update: if isAuthenticated(); // Field Engineers can create issues
+    //   allow delete: if isAuthenticated() && request.auth.token.role == 'Admin';
+    // }
+  }
+}

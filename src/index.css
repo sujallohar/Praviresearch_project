@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #f8fafc; /* slate-50 */
+    --foreground: #0f172a; /* slate-900 */
+    
+    --primary: #1e3a8a; /* blue-900 - professional government blue */
+    --primary-foreground: #ffffff;
+    
+    --secondary: #f1f5f9; /* slate-100 */
+    --secondary-foreground: #1e293b; /* slate-800 */
+    
+    --accent: #3b82f6; /* blue-500 */
+    --accent-foreground: #ffffff;
+
+    --destructive: #ef4444; /* red-500 */
+    --destructive-foreground: #ffffff;
+    
+    --warning: #f59e0b; /* amber-500 */
+    --warning-foreground: #ffffff;
+    
+    --success: #10b981; /* emerald-500 */
+    --success-foreground: #ffffff;
+
+    --border: #e2e8f0; /* slate-200 */
+    --input: #e2e8f0;
+    --ring: #94a3b8; /* slate-400 */
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
