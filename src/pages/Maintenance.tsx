@@ -6,6 +6,7 @@ import { Wrench, Plus, Search, Filter, Pencil, Trash2, Calendar, DollarSign, Che
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { RbacModal } from '../components/modals/RbacModal';
+import { formatTimestamp } from '../utils/dateUtils';
 
 export const Maintenance: React.FC = () => {
   const { role, isPublicCitizen, canScheduleMaintenance } = useAuth();
@@ -295,11 +296,7 @@ export const Maintenance: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {filteredRecords.map(record => {
-                  const dateStr = record.plannedDate?.toDate 
-                    ? new Date(record.plannedDate.toDate()).toLocaleDateString()
-                    : record.plannedDate 
-                    ? new Date(record.plannedDate).toLocaleDateString() 
-                    : 'N/A';
+                  const dateStr = formatTimestamp(record.plannedDate, 'N/A');
 
                   return (
                     <tr key={record.id} className="hover:bg-slate-50 transition-colors">

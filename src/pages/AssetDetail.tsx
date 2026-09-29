@@ -12,6 +12,7 @@ import { AssetModal } from '../components/modals/AssetModal';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { IssueModal } from '../components/modals/IssueModal';
 import { InspectionModal } from '../components/modals/InspectionModal';
+import { formatTimestamp } from '../utils/dateUtils';
 
 const tabs = ['Overview', 'Lifecycle', 'Inspections', 'Issues', 'Maintenance', 'Project'];
 
@@ -358,7 +359,7 @@ export const AssetDetail: React.FC = () => {
                         )}
                       </div>
                       <span className="text-xs text-slate-400 whitespace-nowrap">
-                        {insp.date?.toDate ? new Date(insp.date.toDate()).toLocaleDateString() : 'Recent'}
+                        {formatTimestamp(insp.date, 'Recent')}
                       </span>
                     </div>
                   ))}
@@ -441,7 +442,7 @@ export const AssetDetail: React.FC = () => {
                         <p className="text-xs text-slate-500 mt-1">Contractor: {m.contractor} • Cost: ${m.cost}</p>
                       </div>
                       <span className="text-xs text-slate-400 whitespace-nowrap">
-                        {m.plannedDate?.toDate ? new Date(m.plannedDate.toDate()).toLocaleDateString() : 'Scheduled'}
+                        {formatTimestamp(m.plannedDate, 'Scheduled')}
                       </span>
                     </div>
                   ))}

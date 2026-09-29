@@ -6,6 +6,7 @@ import { ClipboardCheck, Plus, Search, Filter, Pencil, Trash2, Calendar, User, D
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { InspectionModal } from '../components/modals/InspectionModal';
 import { RbacModal } from '../components/modals/RbacModal';
+import { formatTimestamp } from '../utils/dateUtils';
 
 export const Inspections: React.FC = () => {
   const { profile, role, isPublicCitizen, canLogInspection } = useAuth();
@@ -227,11 +228,7 @@ export const Inspections: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
                 {filteredInspections.map(insp => {
-                  const dateStr = insp.date?.toDate 
-                    ? new Date(insp.date.toDate()).toLocaleDateString()
-                    : insp.date 
-                    ? new Date(insp.date).toLocaleDateString() 
-                    : 'N/A';
+                  const dateStr = formatTimestamp(insp.date, 'N/A');
 
                   return (
                     <tr key={insp.id} className="hover:bg-slate-50 transition-colors">

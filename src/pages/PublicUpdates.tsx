@@ -9,6 +9,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import type { Asset, Project, Issue, MaintenanceRecord } from '../types';
 import { IssueModal } from '../components/modals/IssueModal';
 import { Link } from 'react-router-dom';
+import { formatTimestamp } from '../utils/dateUtils';
 
 interface UpdateItem {
   id: string;
@@ -65,7 +66,7 @@ export const PublicUpdates: React.FC = () => {
       title: p.name,
       department: p.departmentId || 'Infrastructure',
       location: 'Municipal Zone',
-      date: p.updatedAt ? new Date(p.updatedAt.seconds ? p.updatedAt.seconds * 1000 : p.updatedAt).toLocaleDateString() : 'Active',
+      date: formatTimestamp(p.updatedAt, 'Active'),
       status: p.status,
       summary: p.description || `Civil project milestone at ${p.progressPercent}% completion.`,
       impact: `Progress: ${p.progressPercent}% • Contractor: ${p.contractor || 'Public Works'}`,
@@ -80,7 +81,7 @@ export const PublicUpdates: React.FC = () => {
         title: `${m.type} on ${relatedAsset?.name || 'Public Asset'}`,
         department: relatedAsset?.departmentId || 'Public Works',
         location: relatedAsset?.location || 'Municipal Area',
-        date: m.actualDate || m.plannedDate || 'Recent',
+        date: formatTimestamp(m.actualDate || m.plannedDate, 'Recent'),
         status: m.status,
         summary: m.notes || `Scheduled servicing and safety certification.`,
         impact: `Status: ${m.status} • Performed by: ${m.contractor || 'Municipal Engineers'}`,
@@ -96,7 +97,7 @@ export const PublicUpdates: React.FC = () => {
         title: i.title,
         department: relatedAsset?.departmentId || 'Civic Infrastructure',
         location: relatedAsset?.location || 'Public Area',
-        date: i.createdAt ? new Date(i.createdAt.seconds ? i.createdAt.seconds * 1000 : i.createdAt).toLocaleDateString() : 'Reported',
+        date: formatTimestamp(i.createdAt, 'Reported'),
         status: i.status,
         summary: i.description,
         impact: `Severity: ${i.severity} • Assigned: ${i.assignedTo || 'Field Team'}`,

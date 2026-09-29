@@ -19,6 +19,7 @@ import { IssueModal } from '../components/modals/IssueModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { RbacModal } from '../components/modals/RbacModal';
 import { useAuth, type UserRole } from '../context/AuthContext';
+import { formatTimestamp } from '../utils/dateUtils';
 
 // Fix leaflet default icon assets
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -634,7 +635,7 @@ export const Dashboard: React.FC = () => {
                 <div key={issue.id} className="pt-2 first:pt-0 flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-slate-900 truncate">{issue.title}</p>
-                    <p className="text-[11px] text-slate-500">Asset: {issue.assetId} • Due: {issue.dueDate?.toDate ? new Date(issue.dueDate.toDate()).toLocaleDateString() : 'Pending'}</p>
+                    <p className="text-[11px] text-slate-500">Asset: {issue.assetId} • Due: {formatTimestamp(issue.dueDate, 'Pending')}</p>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                     issue.severity === 'Critical' ? 'bg-red-100 text-red-800' :
@@ -688,7 +689,7 @@ export const Dashboard: React.FC = () => {
                 <p className="text-[11px] text-slate-500 line-clamp-1">{m.notes || `Work order executed for asset ${m.assetId}`}</p>
                 <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
                   <span>Status: <strong className="text-slate-700">{m.status}</strong></span>
-                  <span>{m.actualDate || m.plannedDate || 'Scheduled'}</span>
+                  <span>{formatTimestamp(m.actualDate || m.plannedDate, 'Scheduled')}</span>
                 </div>
               </div>
             ))}
