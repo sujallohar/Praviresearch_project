@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  Building2, Plus, Search, Filter, 
+  Building2, Plus, Search, 
   MapPin, Pencil, Trash2, Eye, Download,
-  SlidersHorizontal, X, Wrench, Lock, ShieldAlert
+  SlidersHorizontal, X, Wrench, Lock
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
@@ -15,7 +15,6 @@ import { RbacModal } from '../components/modals/RbacModal';
 
 export const Assets: React.FC = () => {
   const { 
-    role, 
     isPublicCitizen, 
     canCreateAsset, 
     canEditAsset, 

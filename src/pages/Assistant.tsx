@@ -37,6 +37,7 @@ export const Assistant: React.FC = () => {
         "Show public safety notices and hazards",
         "What are my viewer access permissions?"
       ];
+    }
     if (role === 'Admin') {
       return [
         "Full system audit: asset health, budgets & critical risks",

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth, type UserRole, ROLE_PERSONAS } from '../context/AuthContext';
+import { useAuth, type UserRole } from '../context/AuthContext';
 import { 
   ShieldCheck, Briefcase, Wrench, HardHat, 
   Eye, ChevronDown, Check, Sparkles 

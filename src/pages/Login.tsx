@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useAuth, type UserRole, ROLE_PERSONAS } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useAuth, type UserRole } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { 
   Building2, Mail, Lock, User as UserIcon, 
   Eye, ArrowRight, ShieldCheck, Briefcase, 

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { 
   AlertTriangle, Plus, Search, Filter, 
-  Trash2, CheckCircle, Clock, Eye, Download, Shield, Lock
+  Trash2, CheckCircle, Clock, Eye, Download
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import type { Issue, Asset } from '../types';
+import type { Issue } from '../types';
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { IssueModal } from '../components/modals/IssueModal';
 import { RbacModal } from '../components/modals/RbacModal';
@@ -13,12 +13,10 @@ import { RbacModal } from '../components/modals/RbacModal';
 export const Issues: React.FC = () => {
   const { 
     role, 
-    isPublicCitizen, 
-    canDeleteAsset 
+    isPublicCitizen 
   } = useAuth();
 
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -39,14 +37,8 @@ export const Issues: React.FC = () => {
       setLoading(false);
     });
 
-    const unsubAssets = onSnapshot(collection(db, 'assets'), (snapshot) => {
-      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Asset));
-      setAssets(data);
-    });
-
     return () => {
       unsubIssues();
-      unsubAssets();
     };
   }, []);
 
@@ -315,7 +307,6 @@ export const Issues: React.FC = () => {
       <IssueModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        assets={assets}
         onSuccess={() => {}}
       />
 

@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Building2, FolderKanban, 
   AlertTriangle, ClipboardCheck, Wrench, 
   BarChart3, MessageSquare, LogOut, Megaphone, 
-  LogIn, Sparkles, Eye, Shield
+  LogIn, Eye
 } from 'lucide-react';
 
 const navItems = [

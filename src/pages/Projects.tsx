@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   FolderKanban, Plus, Search, Filter, 
   Pencil, Trash2, TrendingUp, DollarSign, 
-  Clock, CheckCircle2, Download, Lock, Eye
+  Clock, Download, Lock, Eye
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
@@ -13,7 +13,6 @@ import { RbacModal } from '../components/modals/RbacModal';
 
 export const Projects: React.FC = () => {
   const { 
-    role, 
     isPublicCitizen, 
     canCreateProject, 
     canEditProject, 

@@ -31,7 +31,7 @@ export const RbacModal: React.FC<RbacModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Access Restricted (RBAC Policy)" maxWidth="max-w-md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Access Restricted (RBAC Policy)" maxWidth="md">
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-3.5 bg-amber-50 rounded-xl border border-amber-200">
           <div className="p-2 bg-amber-100 rounded-lg text-amber-700 flex-shrink-0">

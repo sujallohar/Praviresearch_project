@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Building2, FolderKanban, AlertTriangle, 
-  ClipboardCheck, Activity, Database, MapPin, 
+  Activity, Database, MapPin, 
   Plus, ZoomIn, Eye, Wrench, ArrowUpRight, 
-  Sparkles, Megaphone, Lock, ShieldCheck, CheckCircle2, Clock
+  Megaphone, Lock, ShieldCheck, CheckCircle2
 } from 'lucide-react';
 import { seedDemoData } from '../lib/seed';
 import { db } from '../lib/firebase';
@@ -773,7 +773,6 @@ export const Dashboard: React.FC = () => {
       <IssueModal
         isOpen={isIssueModalOpen}
         onClose={() => setIsIssueModalOpen(false)}
-        assets={assets}
         onSuccess={() => {}}
       />
 

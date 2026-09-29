@@ -1,14 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   Megaphone, CheckCircle2, Clock, AlertTriangle, 
-  Building2, Wrench, Shield, Filter, Plus, 
-  MapPin, Calendar, Sparkles, Eye, ArrowRight
+  Building2, Wrench, Shield, Filter, 
+  MapPin, Sparkles, Eye
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import type { Asset, Project, Issue, MaintenanceRecord } from '../types';
 import { IssueModal } from '../components/modals/IssueModal';
-import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
 interface UpdateItem {
@@ -25,7 +24,6 @@ interface UpdateItem {
 }
 
 export const PublicUpdates: React.FC = () => {
-  const { role, switchRole } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -293,7 +291,7 @@ export const PublicUpdates: React.FC = () => {
       <IssueModal
         isOpen={isIssueModalOpen}
         onClose={() => setIsIssueModalOpen(false)}
-        assets={assets}
+        onSuccess={() => {}}
       />
     </div>
   );
