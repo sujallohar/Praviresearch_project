@@ -1,55 +1,64 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { 
+  AlertTriangle, Plus, Search, Filter, 
+  Trash2, CheckCircle, Clock, Eye, Download, Shield, Lock
+} from 'lucide-react';
 import { db } from '../lib/firebase';
-import type { Issue } from '../types';
-import { AlertTriangle, CheckCircle2, Plus, Pencil, Trash2, Search, Calendar, User, Clock, Download } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import type { Issue, Asset } from '../types';
+import { useAuth, type UserRole } from '../context/AuthContext';
 import { IssueModal } from '../components/modals/IssueModal';
+import { RbacModal } from '../components/modals/RbacModal';
 
 export const Issues: React.FC = () => {
-  const { profile, role } = useAuth();
+  const { 
+    role, 
+    isPublicCitizen, 
+    canDeleteAsset 
+  } = useAuth();
+
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null);
-
-  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Open' | 'In Progress' | 'Resolved'>('All');
+  const [statusFilter, setStatusFilter] = useState('All');
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  const fetchIssues = async () => {
-    try {
-      setLoading(true);
-      const q = query(collection(db, 'issues'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Issue));
-      setIssues(data);
-    } catch (error) {
-      console.error('Error fetching issues:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // RBAC Modal State
+  const [rbacModalOpen, setRbacModalOpen] = useState(false);
+  const [rbacActionTitle, setRbacActionTitle] = useState('');
+  const [rbacRequiredRoles, setRbacRequiredRoles] = useState<UserRole[]>([]);
+  const [rbacExplanation, setRbacExplanation] = useState('');
 
   useEffect(() => {
-    fetchIssues();
+    setLoading(true);
+    const unsubIssues = onSnapshot(collection(db, 'issues'), (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Issue));
+      setIssues(data);
+      setLoading(false);
+    });
+
+    const unsubAssets = onSnapshot(collection(db, 'assets'), (snapshot) => {
+      const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Asset));
+      setAssets(data);
+    });
+
+    return () => {
+      unsubIssues();
+      unsubAssets();
+    };
   }, []);
-
-  const handleOpenCreate = () => {
-    setSelectedIssue(null);
-    setIsModalOpen(true);
-  };
-
-  const handleOpenEdit = (issue: Issue) => {
-    setSelectedIssue(issue);
-    setIsModalOpen(true);
-  };
 
   const handleResolveIssue = async (id: string) => {
     if (!id) return;
+    if (isPublicCitizen) {
+      setRbacActionTitle("Resolve Civic Hazard Issue");
+      setRbacRequiredRoles(['Field Engineer', 'Government Officer', 'Admin']);
+      setRbacExplanation("Verifying and closing reported issues requires official certification by Field Engineers or Officers.");
+      setRbacModalOpen(true);
+      return;
+    }
     try {
       setActionLoadingId(id);
       await updateDoc(doc(db, 'issues', id), { status: 'Resolved' });
@@ -62,8 +71,11 @@ export const Issues: React.FC = () => {
   };
 
   const handleDeleteIssue = async (id: string) => {
-    if (role === 'Viewer') {
-      alert("Access Denied: Viewers cannot delete issues.");
+    if (role !== 'Admin') {
+      setRbacActionTitle("Delete Civic Issue Record");
+      setRbacRequiredRoles(['Admin']);
+      setRbacExplanation("Deleting public issue and incident audit records is restricted strictly to Administrators.");
+      setRbacModalOpen(true);
       return;
     }
     if (!window.confirm("Are you sure you want to delete this issue record?")) {
@@ -98,14 +110,12 @@ export const Issues: React.FC = () => {
 
   const criticalCount = issues.filter(i => (i.severity === 'Critical' || i.severity === 'High') && i.status !== 'Resolved').length;
   const openCount = issues.filter(i => i.status !== 'Resolved' && i.status !== 'Closed').length;
-  const resolvedCount = issues.filter(i => i.status === 'Resolved').length;
 
   const handleExportCSV = () => {
-    const headers = "Issue ID,Asset ID,Title,Severity,Status,Reported By,Assigned To,Due Date,Description\n";
-    const rows = filteredIssues.map(i => {
-      const date = i.dueDate?.toDate ? new Date(i.dueDate.toDate()).toISOString().split('T')[0] : '';
-      return `"${i.id}","${i.assetId}","${i.title}","${i.severity}","${i.status}","${i.reportedBy}","${i.assignedTo}","${date}","${(i.description || '').replace(/"/g, '""')}"`;
-    }).join("\n");
+    const headers = "Issue ID,Title,Asset ID,Severity,Status,Assigned To,Reported By,Description\n";
+    const rows = filteredIssues.map(i => 
+      `"${i.id}","${i.title}","${i.assetId}","${i.severity}","${i.status}","${i.assignedTo || ''}","${i.reportedBy || ''}","${(i.description || '').replace(/"/g, '""')}"`
+    ).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -115,12 +125,30 @@ export const Issues: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Public Citizen Notice Banner */}
+      {isPublicCitizen && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-900">
+          <div className="flex items-center gap-2.5">
+            <Eye className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <div>
+              <span className="font-bold">Citizen Hazard Hotline:</span> Anyone can report a damaged road, broken street lamp, water pipe leak, or municipal hazard. No login required!
+            </div>
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg shadow-xs transition-colors flex-shrink-0"
+          >
+            + Report New Issue
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Issues & Discrepancies</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Hazards & Civic Issues</h1>
           <p className="text-sm text-slate-500 mt-1">
-            Track structural defects, compliance hazards, and field anomalies with priority response dispatch.
+            Track and resolve reported discrepancies, safety hazards, citizen complaints, and structural failures.
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -130,9 +158,10 @@ export const Issues: React.FC = () => {
           >
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
-          <button
-            onClick={handleOpenCreate}
-            className="flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
+            title="Open to all citizens and staff"
           >
             <Plus className="w-4 h-4" /> Report Issue
           </button>
@@ -140,7 +169,7 @@ export const Issues: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-red-50 text-red-600 rounded-lg">
             <AlertTriangle className="w-6 h-6" />
@@ -156,178 +185,147 @@ export const Issues: React.FC = () => {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Open Discrepancies</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Unresolved Issues</p>
             <p className="text-2xl font-bold text-slate-900">{openCount}</p>
           </div>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-lg">
-            <CheckCircle2 className="w-6 h-6" />
+            <CheckCircle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Resolved Issues</p>
-            <p className="text-2xl font-bold text-slate-900">{resolvedCount}</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Resolved Total</p>
+            <p className="text-2xl font-bold text-slate-900">{issues.length - openCount}</p>
           </div>
         </div>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 justify-between items-center">
-        <div className="relative flex-1 w-full md:max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-          <input
-            type="text"
-            placeholder="Search issues by hazard, description, or asset ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      {/* Controls & Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between gap-4 bg-slate-50/50">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search issues by title, asset ID, assignee..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
 
-        <div className="flex bg-slate-100 p-1 rounded-lg text-xs font-medium self-stretch md:self-auto justify-center">
-          {(['All', 'Open', 'In Progress', 'Resolved'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-md transition-colors ${
-                statusFilter === tab
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-slate-300 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              {tab}
-            </button>
-          ))}
+              <option value="All">All Issues</option>
+              <option value="Open">Active Only</option>
+              <option value="Resolved">Resolved Only</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      {/* Grid of Issues */}
-      {loading ? (
-        <div className="p-12 text-center text-slate-500 bg-white rounded-xl border border-slate-200">
-          Loading issues...
-        </div>
-      ) : filteredIssues.length === 0 ? (
-        <div className="text-center py-16 px-4 bg-white rounded-xl shadow-sm border border-slate-200">
-          <AlertTriangle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-          <h3 className="text-base font-semibold text-slate-800">No issues found</h3>
-          <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-4">
-            {searchQuery || statusFilter !== 'All'
-              ? 'Try broadening your search query or switching tabs.'
-              : 'Great job! All physical assets are currently operating without reported anomalies.'}
-          </p>
-          <button
-            onClick={handleOpenCreate}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium"
-          >
-            Report Defect
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredIssues.map((issue) => {
-            const dueDateStr = issue.dueDate?.toDate
-              ? new Date(issue.dueDate.toDate()).toLocaleDateString()
-              : issue.dueDate
-              ? new Date(issue.dueDate).toLocaleDateString()
-              : 'N/A';
-
-            return (
-              <div
-                key={issue.id}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between hover:shadow-md transition-all"
-              >
-                <div>
-                  <div className="flex justify-between items-start gap-2 mb-3">
-                    <h3 className="font-semibold text-slate-900 text-base leading-snug line-clamp-2">
-                      {issue.title}
-                    </h3>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border shrink-0 ${
-                        issue.severity === 'Critical'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : issue.severity === 'High'
-                          ? 'bg-orange-50 text-orange-700 border-orange-200'
-                          : 'bg-amber-50 text-amber-700 border-amber-200'
-                      }`}
-                    >
-                      {issue.severity}
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-slate-600 line-clamp-3 mb-4">
-                    {issue.description || 'No detailed description logged.'}
-                  </p>
-
-                  <div className="space-y-1.5 text-xs text-slate-500 pt-3 border-t border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-slate-400">Asset: {issue.assetId}</span>
-                      <span className="flex items-center gap-1 text-slate-600">
-                        <Calendar className="w-3.5 h-3.5 text-slate-400" /> Due: {dueDateStr}
+        {loading ? (
+          <div className="p-12 text-center text-slate-500 text-sm">
+            Loading civic hazard records...
+          </div>
+        ) : filteredIssues.length === 0 ? (
+          <div className="p-12 text-center text-slate-500 text-sm">
+            No issues found matching criteria.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50/75 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <th className="py-3 px-4">Title & Description</th>
+                  <th className="py-3 px-4">Target Asset</th>
+                  <th className="py-3 px-4">Severity</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4">Assigned Engineer</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {filteredIssues.map((issue) => (
+                  <tr key={issue.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-slate-900">{issue.title}</div>
+                      <div className="text-xs text-slate-500 line-clamp-1 mt-0.5">{issue.description}</div>
+                    </td>
+                    <td className="py-3.5 px-4 font-mono text-xs text-slate-600">
+                      {issue.assetId}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        issue.severity === 'Critical' ? 'bg-red-50 text-red-700 border border-red-200' :
+                        issue.severity === 'High' ? 'bg-orange-50 text-orange-700 border border-orange-200' :
+                        issue.severity === 'Medium' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                        'bg-slate-50 text-slate-700 border border-slate-200'
+                      }`}>
+                        {issue.severity}
                       </span>
-                    </div>
-                    {issue.assignedTo && (
-                      <div className="flex items-center gap-1.5 text-slate-600">
-                        <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Assigned: {issue.assignedTo}</span>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        issue.status === 'Resolved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        issue.status === 'In Progress' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                        'bg-slate-100 text-slate-800'
+                      }`}>
+                        {issue.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 text-xs">
+                      {issue.assignedTo || 'Unassigned'}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {issue.status !== 'Resolved' && (
+                          <button
+                            onClick={() => handleResolveIssue(issue.id!)}
+                            disabled={actionLoadingId === issue.id}
+                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded transition-colors"
+                          >
+                            Resolve
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDeleteIssue(issue.id!)}
+                          disabled={actionLoadingId === issue.id}
+                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Delete issue (Admin only)"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center">
-                  <span
-                    className={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${
-                      issue.status === 'Resolved'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : issue.status === 'In Progress'
-                        ? 'bg-blue-50 text-blue-700 border-blue-200'
-                        : 'bg-slate-50 text-slate-700 border-slate-200'
-                    }`}
-                  >
-                    {issue.status}
-                  </span>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleOpenEdit(issue)}
-                      className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                      title="Edit full issue"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    {issue.status !== 'Resolved' && (
-                      <button
-                        onClick={() => handleResolveIssue(issue.id!)}
-                        disabled={actionLoadingId === issue.id}
-                        className="flex items-center gap-1 text-xs text-emerald-700 bg-emerald-50 hover:bg-emerald-100 font-semibold px-2.5 py-1.5 rounded-md transition-colors border border-emerald-200"
-                      >
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Resolve
-                      </button>
-                    )}
-                    <button
-                      onClick={() => handleDeleteIssue(issue.id!)}
-                      disabled={actionLoadingId === issue.id}
-                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                      title="Delete issue"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Dynamic Issue Modal */}
       <IssueModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        issueToEdit={selectedIssue}
-        defaultReportedBy={profile?.name}
-        onSuccess={fetchIssues}
+        assets={assets}
+        onSuccess={() => {}}
+      />
+
+      {/* RBAC Notice Modal */}
+      <RbacModal
+        isOpen={rbacModalOpen}
+        onClose={() => setRbacModalOpen(false)}
+        actionTitle={rbacActionTitle}
+        requiredRoles={rbacRequiredRoles}
+        explanation={rbacExplanation}
       />
     </div>
   );

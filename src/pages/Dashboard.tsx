@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { 
   Building2, FolderKanban, AlertTriangle, 
   ClipboardCheck, Activity, Database, MapPin, 
-  Plus, ZoomIn, Eye, Wrench, ArrowUpRight
+  Plus, ZoomIn, Eye, Wrench, ArrowUpRight, 
+  Sparkles, Megaphone, Lock, ShieldCheck, CheckCircle2, Clock
 } from 'lucide-react';
 import { seedDemoData } from '../lib/seed';
 import { db } from '../lib/firebase';
@@ -16,6 +17,8 @@ import { AssetModal } from '../components/modals/AssetModal';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { IssueModal } from '../components/modals/IssueModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
+import { RbacModal } from '../components/modals/RbacModal';
+import { useAuth, type UserRole } from '../context/AuthContext';
 
 // Fix leaflet default icon assets
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -94,6 +97,15 @@ const MapBoundsController: React.FC<{
 };
 
 export const Dashboard: React.FC = () => {
+  const { 
+    role, 
+    isPublicCitizen, 
+    canCreateAsset, 
+    canCreateProject, 
+    canScheduleMaintenance, 
+    switchRole 
+  } = useAuth();
+
   const [assets, setAssets] = useState<Asset[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -112,6 +124,12 @@ export const Dashboard: React.FC = () => {
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [maintAssetId, setMaintAssetId] = useState<string | undefined>();
+
+  // RBAC Permission Modal state
+  const [rbacModalOpen, setRbacModalOpen] = useState(false);
+  const [rbacActionTitle, setRbacActionTitle] = useState('');
+  const [rbacRequiredRoles, setRbacRequiredRoles] = useState<UserRole[]>([]);
+  const [rbacExplanation, setRbacExplanation] = useState('');
 
   // Real-time Firestore sync
   useEffect(() => {
@@ -154,7 +172,49 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // RBAC-gated Action Triggers
+  const handleTriggerRegisterAsset = () => {
+    if (!canCreateAsset) {
+      setRbacActionTitle("Register New Asset");
+      setRbacRequiredRoles(['Government Officer', 'Admin']);
+      setRbacExplanation("Creating and registering public infrastructure assets is restricted to authorized Government Officers and Administrators. As a Public Citizen or Field Engineer, you can browse assets and report issues.");
+      setRbacModalOpen(true);
+      return;
+    }
+    setIsAssetModalOpen(true);
+  };
+
+  const handleTriggerScheduleWork = () => {
+    if (!canScheduleMaintenance) {
+      setRbacActionTitle("Schedule Maintenance Work");
+      setRbacRequiredRoles(['Government Officer', 'Field Engineer', 'Admin']);
+      setRbacExplanation("Issuing maintenance work orders requires operational privileges granted to Field Engineers, Department Officers, or Administrators.");
+      setRbacModalOpen(true);
+      return;
+    }
+    setMaintAssetId(undefined);
+    setIsMaintModalOpen(true);
+  };
+
+  const handleTriggerNewProject = () => {
+    if (!canCreateProject) {
+      setRbacActionTitle("Create New Capital Project");
+      setRbacRequiredRoles(['Government Officer', 'Admin']);
+      setRbacExplanation("Creating and funding municipal infrastructure projects requires Government Officer or Admin authorization.");
+      setRbacModalOpen(true);
+      return;
+    }
+    setIsProjectModalOpen(true);
+  };
+
   const handleScheduleMaintForAsset = (assetId: string) => {
+    if (!canScheduleMaintenance) {
+      setRbacActionTitle("Schedule Maintenance for Asset");
+      setRbacRequiredRoles(['Government Officer', 'Field Engineer', 'Admin']);
+      setRbacExplanation("Scheduling maintenance on specific assets is reserved for Field Engineers and Officers.");
+      setRbacModalOpen(true);
+      return;
+    }
     setMaintAssetId(assetId);
     setIsMaintModalOpen(true);
   };
@@ -177,41 +237,131 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
+      {/* Public Citizen & Transparency Welcome Banner */}
+      {isPublicCitizen ? (
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/30 border border-blue-400/40 text-blue-200 text-xs font-semibold mb-2.5">
+                <Eye className="w-3.5 h-3.5" />
+                Public Transparency Portal • Open Access (No Login Required)
+              </div>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+                Live Public Infrastructure Transparency Portal
+              </h2>
+              <p className="text-xs sm:text-sm text-blue-100 mt-1 leading-relaxed">
+                Welcome, Citizen! You have unrestricted live access to regional infrastructure condition maps, active road projects, and municipal maintenance updates. Anyone can report road hazards or water leaks directly.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+              <button
+                onClick={() => setIsIssueModalOpen(true)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-white text-blue-900 hover:bg-blue-50 font-bold text-xs rounded-xl shadow-sm transition-all"
+              >
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+                Report a Civic Issue
+              </button>
+              <Link
+                to="/updates"
+                className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600/70 hover:bg-blue-600 text-white font-semibold text-xs rounded-xl border border-blue-400/30 transition-all"
+              >
+                <Megaphone className="w-4 h-4 text-blue-200" />
+                Citizen Updates Feed
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-blue-600/40 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-200">
+            <span>Evaluating as Staff or Engineer? Switch preview role:</span>
+            <div className="flex flex-wrap gap-1.5">
+              <button 
+                onClick={() => switchRole('Government Officer')} 
+                className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-semibold transition-colors"
+              >
+                👔 Government Officer
+              </button>
+              <button 
+                onClick={() => switchRole('Field Engineer')} 
+                className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-semibold transition-colors"
+              >
+                👷 Field Engineer
+              </button>
+              <button 
+                onClick={() => switchRole('Admin')} 
+                className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-semibold transition-colors"
+              >
+                🛡️ Admin
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-slate-900">Active Role: {role}</span>
+                <span className="text-[11px] px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold">
+                  Authorized Staff
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                You have role-based operational permissions to manage lifecycle records and take actions.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => switchRole('Viewer')}
+            className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+          >
+            Switch to Public Citizen View
+          </button>
+        </div>
+      )}
+
+      {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Overview Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-0.5">
             Real-time public asset governance, geographic spatial mapping, and lifecycle KPIs.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
           <button 
-            onClick={() => setIsAssetModalOpen(true)}
-            className="flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
+            onClick={handleTriggerRegisterAsset}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+            title={canCreateAsset ? "Register a new asset" : "Restricted: Officer/Admin only"}
           >
-            <Plus className="w-4 h-4" />
+            {canCreateAsset ? <Plus className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5 opacity-80" />}
             Register Asset
           </button>
           <button 
-            onClick={() => { setMaintAssetId(undefined); setIsMaintModalOpen(true); }}
+            onClick={handleTriggerScheduleWork}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            title={canScheduleMaintenance ? "Schedule maintenance" : "Restricted: Engineer/Officer only"}
           >
-            <Wrench className="w-3.5 h-3.5 text-blue-600" />
+            {canScheduleMaintenance ? <Wrench className="w-3.5 h-3.5 text-blue-600" /> : <Lock className="w-3.5 h-3.5 text-slate-400" />}
             Schedule Work
           </button>
           <button 
             onClick={() => setIsIssueModalOpen(true)}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            title="Open to everyone (Citizens & Staff)"
           >
             <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
             Report Issue
           </button>
           <button 
-            onClick={() => setIsProjectModalOpen(true)}
+            onClick={handleTriggerNewProject}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            title={canCreateProject ? "New capital project" : "Restricted: Officer/Admin only"}
           >
-            <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
+            {canCreateProject ? <FolderKanban className="w-3.5 h-3.5 text-indigo-600" /> : <Lock className="w-3.5 h-3.5 text-slate-400" />}
             New Project
           </button>
           <button 
@@ -261,22 +411,6 @@ export const Dashboard: React.FC = () => {
         </Link>
 
         <Link 
-          to="/maintenance" 
-          className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center justify-between hover:border-amber-400 hover:shadow-md transition-all group"
-        >
-          <div className="flex items-center">
-            <div className="bg-amber-50 group-hover:bg-amber-100 p-3 rounded-xl mr-4 transition-colors">
-              <ClipboardCheck className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Maint. Scheduled</p>
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">{loading ? '-' : scheduledMaint.length}</p>
-            </div>
-          </div>
-          <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-amber-600 transition-colors" />
-        </Link>
-
-        <Link 
           to="/issues" 
           className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center justify-between hover:border-red-400 hover:shadow-md transition-all group"
         >
@@ -291,112 +425,126 @@ export const Dashboard: React.FC = () => {
           </div>
           <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-red-600 transition-colors" />
         </Link>
+
+        <Link 
+          to="/maintenance" 
+          className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex items-center justify-between hover:border-amber-400 hover:shadow-md transition-all group"
+        >
+          <div className="flex items-center">
+            <div className="bg-amber-50 group-hover:bg-amber-100 p-3 rounded-xl mr-4 transition-colors">
+              <Wrench className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Work Orders</p>
+              <p className="text-2xl font-bold text-slate-900 mt-0.5">{loading ? '-' : scheduledMaint.length}</p>
+            </div>
+          </div>
+          <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-amber-600 transition-colors" />
+        </Link>
       </div>
 
-      {/* Main Grid: Interactive Map + Attention Panel */}
+      {/* Main Grid: Interactive Map + Status Side Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Interactive Spatial GIS Map */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 lg:col-span-2 overflow-hidden flex flex-col h-[560px]">
-          {/* Map Header & Controls */}
-          <div className="p-3.5 border-b border-slate-200 bg-slate-50/75 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-5 h-5 text-blue-600" />
-              <h2 className="text-sm font-bold text-slate-900">Spatial Asset Geography</h2>
-              <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                {mappedAssets.length} on map
-              </span>
+        {/* Left 2 Cols: GIS Spatial Map */}
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[520px]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-blue-600" />
+                Regional GIS Asset & Spatial Monitor
+              </h2>
+              <p className="text-xs text-slate-500">
+                Displaying {mappedAssets.length} mapped assets with real-time condition color coding.
+              </p>
             </div>
 
+            {/* Map Filters & Controls */}
             <div className="flex items-center gap-2">
-              {/* Map Filter Tabs */}
-              <div className="flex bg-slate-200 p-0.5 rounded-lg text-xs font-medium">
-                {(['All', 'High Risk', 'Operational', 'Under Maintenance'] as const).map((filter) => (
+              <div className="flex bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
+                {(['All', 'High Risk', 'Operational', 'Under Maintenance'] as const).map(tab => (
                   <button
-                    key={filter}
-                    onClick={() => { setMapFilter(filter); setFocusedAsset(null); }}
-                    className={`px-2.5 py-1 rounded-md transition-colors ${
-                      mapFilter === filter
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-600 hover:text-slate-900'
+                    key={tab}
+                    onClick={() => { setMapFilter(tab); setFocusedAsset(null); }}
+                    className={`px-2.5 py-1 rounded-md transition-all ${
+                      mapFilter === tab 
+                        ? 'bg-white text-slate-900 shadow-xs' 
+                        : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
-                    {filter}
+                    {tab}
                   </button>
                 ))}
               </div>
 
-              {/* Fit All Button */}
               <button
                 onClick={() => { setFocusedAsset(null); setFitTrigger(prev => prev + 1); }}
-                className="p-1.5 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-1"
+                className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
                 title="Fit all markers in view"
               >
-                <ZoomIn className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Fit All</span>
+                <ZoomIn className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Map Container */}
-          <div className="flex-1 w-full h-full relative z-0">
-            <MapContainer 
-              center={[23.0225, 72.5714]} 
-              zoom={12} 
+          {/* Map Leaflet Container */}
+          <div className="flex-1 rounded-lg overflow-hidden border border-slate-200 relative z-0">
+            <MapContainer
+              center={[28.6139, 77.2090]} // New Delhi / National Capital center
+              zoom={11}
               style={{ height: '100%', width: '100%' }}
+              className="z-0"
             >
               <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap contributors"
               />
 
               <MapBoundsController 
                 assets={mappedAssets} 
-                focusedAsset={focusedAsset} 
+                focusedAsset={focusedAsset}
                 fitTrigger={fitTrigger} 
               />
 
-              {mappedAssets.map((asset) => (
-                <Marker 
-                  key={asset.id} 
+              {mappedAssets.map(asset => (
+                <Marker
+                  key={asset.id}
                   position={[Number(asset.latitude), Number(asset.longitude)]}
                   icon={createCustomMarker(asset.riskLevel, asset.condition)}
                 >
                   <Popup>
-                    <div className="min-w-[200px] p-1 space-y-2">
-                      <div>
-                        <div className="font-bold text-sm text-slate-900">{asset.name}</div>
-                        <div className="text-xs text-slate-500 font-medium mt-0.5">
-                          {asset.type} • {asset.location}
+                    <div className="p-1 min-w-[210px] space-y-2">
+                      <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-1.5">
+                        <div>
+                          <h4 className="font-bold text-slate-900 text-xs leading-tight">{asset.name}</h4>
+                          <p className="text-[11px] text-slate-500">{asset.type} • {asset.departmentId}</p>
                         </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          asset.condition === 'Critical' ? 'bg-red-100 text-red-700' :
-                          asset.condition === 'Poor' ? 'bg-orange-100 text-orange-700' :
-                          asset.condition === 'Fair' ? 'bg-amber-100 text-amber-700' :
-                          'bg-emerald-100 text-emerald-700'
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                          asset.condition === 'Critical' || asset.condition === 'Poor' ? 'bg-red-100 text-red-800' :
+                          asset.condition === 'Fair' ? 'bg-amber-100 text-amber-800' :
+                          'bg-emerald-100 text-emerald-800'
                         }`}>
-                          {asset.condition} Condition
-                        </span>
-
-                        <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700">
-                          {asset.status}
+                          {asset.condition}
                         </span>
                       </div>
 
-                      <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <Link 
-                          to={`/assets/${asset.id}`} 
-                          className="font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-0.5"
+                      <div className="text-[11px] text-slate-600 space-y-0.5">
+                        <p><strong className="text-slate-700">Location:</strong> {asset.location}</p>
+                        <p><strong className="text-slate-700">Status:</strong> {asset.status}</p>
+                        <p><strong className="text-slate-700">Risk:</strong> {asset.riskLevel}</p>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between gap-2">
+                        <Link
+                          to={`/assets/${asset.id}`}
+                          className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"
                         >
-                          <Eye className="w-3.5 h-3.5" /> Details
+                          <Eye className="w-3 h-3" /> Full Profile
                         </Link>
                         <button
                           onClick={() => handleScheduleMaintForAsset(asset.id!)}
-                          className="font-semibold text-slate-700 hover:text-slate-900 flex items-center gap-0.5"
+                          className="text-[11px] font-semibold text-slate-700 hover:text-slate-900 bg-slate-100 px-2 py-0.5 rounded"
                         >
-                          <Wrench className="w-3.5 h-3.5 text-blue-600" /> Work Order
+                          Work Order
                         </button>
                       </div>
                     </div>
@@ -404,47 +552,54 @@ export const Dashboard: React.FC = () => {
                 </Marker>
               ))}
             </MapContainer>
+          </div>
 
-            {/* Map Legend */}
-            <div className="absolute bottom-3 left-3 z-[1000] bg-white p-2 rounded-lg shadow-md border border-slate-200 text-[11px] font-medium text-slate-700 flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" /> Good / Safe
+          {/* Map Legend */}
+          <div className="mt-2.5 flex flex-wrap items-center justify-between text-[11px] text-slate-500 pt-1">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                Good Condition
               </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" /> Medium Risk
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                Fair / Servicing Due
               </span>
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" /> Critical / High Risk
+              <span className="flex items-center gap-1.5 font-medium">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
+                High Risk / Critical
               </span>
             </div>
+            <span>Click any marker to inspect asset lifecycle or issue work order</span>
           </div>
         </div>
 
-        {/* Right Side Column: Attention Required & Quick Focus */}
-        <div className="flex flex-col gap-6 h-[560px]">
-          {/* Critical Assets List */}
+        {/* Right 1 Col: High Risk Watchlist & Recent Hazards */}
+        <div className="flex flex-col gap-4 h-[520px]">
+          {/* Critical Risk Attention List */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 overflow-hidden flex flex-col">
             <div className="p-3.5 border-b border-slate-200 bg-slate-50/75 flex justify-between items-center">
               <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                 <AlertTriangle className="w-4 h-4 text-red-500" />
                 Critical Attention ({highRiskAssets.length})
               </h2>
+              <span className="text-[11px] text-red-600 font-semibold bg-red-50 px-2 py-0.5 rounded-full border border-red-200">
+                Action Required
+              </span>
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-2.5 divide-y divide-slate-100">
               {highRiskAssets.length === 0 ? (
-                <div className="text-center text-slate-500 text-xs py-10">
-                  No high-risk assets currently flagged.
+                <div className="text-center py-8 text-xs text-slate-400">
+                  No assets currently flagged at critical risk.
                 </div>
               ) : (
-                highRiskAssets.map(asset => (
-                  <div key={asset.id} className="pt-2 first:pt-0 flex justify-between items-start gap-2">
+                highRiskAssets.slice(0, 5).map(asset => (
+                  <div key={asset.id} className="pt-2 first:pt-0 flex items-center justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-xs font-semibold text-slate-900 truncate">{asset.name}</h3>
-                      <p className="text-[11px] text-red-600 font-medium">
-                        {asset.condition} • Risk: {asset.riskLevel}
-                      </p>
+                      <p className="text-xs font-bold text-slate-900 truncate">{asset.name}</p>
+                      <p className="text-[11px] text-slate-500 truncate">{asset.location} • {asset.type}</p>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {asset.latitude && asset.longitude && (
                         <button
                           onClick={() => setFocusedAsset(asset)}
@@ -499,7 +654,109 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Dynamic Modals wired to Dashboard actions */}
+      {/* Live Public Updates & Transparency Feed for Citizens and Visitors */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-blue-600" />
+              Live Infrastructure Updates & Civic Activity
+            </h2>
+            <p className="text-xs text-slate-500">
+              Transparent real-time feed of completed maintenance, road repairs, and project progress visible to all citizens.
+            </p>
+          </div>
+          <Link
+            to="/updates"
+            className="text-xs font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1"
+          >
+            Open Dedicated Citizen Board <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Recent Maintenance Completed */}
+          <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-2">
+              <span className="flex items-center gap-1.5">
+                <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                Latest Maintenance
+              </span>
+              <span className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-semibold">
+                Servicing
+              </span>
+            </div>
+            {maintenance.slice(0, 3).map(m => (
+              <div key={m.id} className="py-2 border-b border-slate-200 last:border-b-0">
+                <p className="text-xs font-bold text-slate-900">{m.type}</p>
+                <p className="text-[11px] text-slate-500 line-clamp-1">{m.notes || `Work order executed for asset ${m.assetId}`}</p>
+                <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
+                  <span>Status: <strong className="text-slate-700">{m.status}</strong></span>
+                  <span>{m.actualDate || m.plannedDate || 'Scheduled'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Capital Projects Milestones */}
+          <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-2">
+              <span className="flex items-center gap-1.5">
+                <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
+                Active Projects Progress
+              </span>
+              <span className="text-[10px] bg-indigo-100 text-indigo-800 px-1.5 py-0.5 rounded font-semibold">
+                Civil Works
+              </span>
+            </div>
+            {projects.slice(0, 3).map(p => (
+              <div key={p.id} className="py-2 border-b border-slate-200 last:border-b-0">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-900 truncate max-w-[170px]">{p.name}</p>
+                  <span className="text-[11px] font-bold text-indigo-700">{p.progressPercent}%</span>
+                </div>
+                <div className="w-full bg-slate-200 h-1.5 rounded-full mt-1.5 overflow-hidden">
+                  <div 
+                    className="bg-indigo-600 h-full rounded-full transition-all"
+                    style={{ width: `${p.progressPercent}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-1.5 text-[10px] text-slate-400">
+                  <span>Contractor: {p.contractor || 'Public Works'}</span>
+                  <span className="font-semibold text-slate-600">{p.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Resolved Civic Issues */}
+          <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-2">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                Resolved Civic Reports
+              </span>
+              <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-semibold">
+                Fixed
+              </span>
+            </div>
+            {issues.slice(0, 3).map(i => (
+              <div key={i.id} className="py-2 border-b border-slate-200 last:border-b-0">
+                <p className="text-xs font-bold text-slate-900 truncate">{i.title}</p>
+                <p className="text-[11px] text-slate-500 line-clamp-1">{i.description}</p>
+                <div className="flex items-center justify-between mt-1 text-[10px]">
+                  <span className="text-slate-400">Severity: {i.severity}</span>
+                  <span className={`font-semibold ${i.status === 'Resolved' ? 'text-emerald-600' : 'text-slate-600'}`}>
+                    {i.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Dynamic Action Modals */}
       <AssetModal
         isOpen={isAssetModalOpen}
         onClose={() => setIsAssetModalOpen(false)}
@@ -516,6 +773,7 @@ export const Dashboard: React.FC = () => {
       <IssueModal
         isOpen={isIssueModalOpen}
         onClose={() => setIsIssueModalOpen(false)}
+        assets={assets}
         onSuccess={() => {}}
       />
 
@@ -523,6 +781,21 @@ export const Dashboard: React.FC = () => {
         isOpen={isProjectModalOpen}
         onClose={() => setIsProjectModalOpen(false)}
         onSuccess={() => {}}
+      />
+
+      {/* RBAC Permission Notice Modal */}
+      <RbacModal
+        isOpen={rbacModalOpen}
+        onClose={() => setRbacModalOpen(false)}
+        actionTitle={rbacActionTitle}
+        requiredRoles={rbacRequiredRoles}
+        explanation={rbacExplanation}
+        onRoleSwitched={() => {
+          // If user switches role, automatically reopen the corresponding modal they attempted!
+          if (rbacActionTitle === "Register New Asset") setIsAssetModalOpen(true);
+          if (rbacActionTitle === "Schedule Maintenance Work") setIsMaintModalOpen(true);
+          if (rbacActionTitle === "Create New Capital Project") setIsProjectModalOpen(true);
+        }}
       />
     </div>
   );

@@ -37,6 +37,13 @@ export const Assistant: React.FC = () => {
         "Show public safety notices and hazards",
         "What are my viewer access permissions?"
       ];
+    if (role === 'Admin') {
+      return [
+        "Full system audit: asset health, budgets & critical risks",
+        "Which projects are over budget or delayed?",
+        "Show critical infrastructure risks across all departments",
+        "Overview of active work orders, contractors, and unresolved issues"
+      ];
     }
     // Government Officer default
     return [

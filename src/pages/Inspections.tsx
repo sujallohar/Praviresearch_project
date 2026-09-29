@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { Inspection } from '../types';
-import { ClipboardCheck, Plus, Search, Filter, Pencil, Trash2, Calendar, User, Download } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { ClipboardCheck, Plus, Search, Filter, Pencil, Trash2, Calendar, User, Download, Lock, Eye } from 'lucide-react';
+import { useAuth, type UserRole } from '../context/AuthContext';
 import { InspectionModal } from '../components/modals/InspectionModal';
+import { RbacModal } from '../components/modals/RbacModal';
 
 export const Inspections: React.FC = () => {
-  const { profile, role } = useAuth();
+  const { profile, role, isPublicCitizen, canLogInspection } = useAuth();
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,6 +20,12 @@ export const Inspections: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [conditionFilter, setConditionFilter] = useState('All');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+
+  // RBAC Modal State
+  const [rbacModalOpen, setRbacModalOpen] = useState(false);
+  const [rbacActionTitle, setRbacActionTitle] = useState('');
+  const [rbacRequiredRoles, setRbacRequiredRoles] = useState<UserRole[]>([]);
+  const [rbacExplanation, setRbacExplanation] = useState('');
 
   const fetchInspections = async () => {
     try {
@@ -39,8 +46,11 @@ export const Inspections: React.FC = () => {
   }, []);
 
   const handleOpenCreate = () => {
-    if (role === 'Viewer') {
-      alert("Access Denied: Viewers cannot log inspections.");
+    if (!canLogInspection) {
+      setRbacActionTitle("Log Engineering Inspection");
+      setRbacRequiredRoles(['Field Engineer', 'Admin']);
+      setRbacExplanation("Conducting on-site structural inspections and issuing safety ratings requires certified Field Engineer credentials or Administrator authority.");
+      setRbacModalOpen(true);
       return;
     }
     setSelectedInspection(null);
@@ -48,8 +58,11 @@ export const Inspections: React.FC = () => {
   };
 
   const handleOpenEdit = (inspection: Inspection) => {
-    if (role === 'Viewer') {
-      alert("Access Denied: Viewers cannot modify inspections.");
+    if (!canLogInspection) {
+      setRbacActionTitle("Modify Inspection Findings");
+      setRbacRequiredRoles(['Field Engineer', 'Admin']);
+      setRbacExplanation("Modifying official inspection findings and engineering recommendations is restricted to Field Engineers and Administrators.");
+      setRbacModalOpen(true);
       return;
     }
     setSelectedInspection(inspection);
@@ -57,8 +70,11 @@ export const Inspections: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (role !== 'Government Officer') {
-      alert("Access Denied: Only Government Officers can delete inspection records.");
+    if (role !== 'Admin') {
+      setRbacActionTitle("Delete Inspection Audit");
+      setRbacRequiredRoles(['Admin']);
+      setRbacExplanation("Deleting official engineering inspection records is restricted exclusively to System Administrators.");
+      setRbacModalOpen(true);
       return;
     }
     if (!window.confirm("Are you sure you want to delete this inspection record?")) {
@@ -103,6 +119,21 @@ export const Inspections: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Public Citizen Notice Banner */}
+      {isPublicCitizen && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-900">
+          <div className="flex items-center gap-2.5">
+            <Eye className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <div>
+              <span className="font-bold">Public Inspection Records:</span> Transparent safety audits and structural condition reports conducted by certified municipal engineers.
+            </div>
+          </div>
+          <span className="text-[11px] font-semibold text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded border border-blue-200 flex-shrink-0">
+            Open Audits
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -121,8 +152,10 @@ export const Inspections: React.FC = () => {
           <button
             onClick={handleOpenCreate}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
+            title={canLogInspection ? "Log Inspection" : "Restricted: Field Engineer/Admin only"}
           >
-            <Plus className="w-4 h-4" /> Log Inspection
+            {canLogInspection ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
+            Log Inspection
           </button>
         </div>
       </div>
@@ -248,7 +281,7 @@ export const Inspections: React.FC = () => {
                             onClick={() => handleDelete(insp.id!)}
                             disabled={actionLoadingId === insp.id}
                             className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Delete inspection"
+                            title="Delete inspection (Admin only)"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -270,6 +303,19 @@ export const Inspections: React.FC = () => {
         inspectionToEdit={selectedInspection}
         defaultInspector={profile?.name}
         onSuccess={fetchInspections}
+      />
+
+      {/* RBAC Notice Modal */}
+      <RbacModal
+        isOpen={rbacModalOpen}
+        onClose={() => setRbacModalOpen(false)}
+        actionTitle={rbacActionTitle}
+        requiredRoles={rbacRequiredRoles}
+        explanation={rbacExplanation}
+        onRoleSwitched={() => {
+          if (rbacActionTitle === "Log Engineering Inspection") setIsModalOpen(true);
+          if (rbacActionTitle === "Modify Inspection Findings" && selectedInspection) setIsModalOpen(true);
+        }}
       />
     </div>
   );

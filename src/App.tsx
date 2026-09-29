@@ -1,10 +1,10 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
-
+import { PublicUpdates } from './pages/PublicUpdates';
 import { Assets } from './pages/Assets';
 import { AssetDetail } from './pages/AssetDetail';
 import { Projects } from './pages/Projects';
@@ -14,22 +14,18 @@ import { Maintenance } from './pages/Maintenance';
 import { Assistant } from './pages/Assistant';
 import { Reports } from './pages/Reports';
 
-// Protected Route Wrapper
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { currentUser } = useAuth();
-  if (!currentUser) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-};
-
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public Login & Role Switcher Portal */}
           <Route path="/login" element={<Login />} />
           
-          <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+          {/* Main App Routes - Open to Public Citizens with Granular RBAC */}
+          <Route path="/" element={<AppLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="updates" element={<PublicUpdates />} />
             <Route path="assets" element={<Assets />} />
             <Route path="assets/:id" element={<AssetDetail />} />
             <Route path="projects" element={<Projects />} />

@@ -1,34 +1,52 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getDocs, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import { 
+  FolderKanban, Plus, Search, Filter, 
+  Pencil, Trash2, TrendingUp, DollarSign, 
+  Clock, CheckCircle2, Download, Lock, Eye
+} from 'lucide-react';
 import { db } from '../lib/firebase';
+import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import type { Project } from '../types';
-import { FolderKanban, Plus, Search, Filter, Pencil, Trash2, DollarSign, TrendingUp, HardHat, Download } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, type UserRole } from '../context/AuthContext';
 import { ProjectModal } from '../components/modals/ProjectModal';
+import { RbacModal } from '../components/modals/RbacModal';
 
 export const Projects: React.FC = () => {
-  const { role } = useAuth();
+  const { 
+    role, 
+    isPublicCitizen, 
+    canCreateProject, 
+    canEditProject, 
+    canDeleteProject 
+  } = useAuth();
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-
-  // Search & Filter State
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+
+  // RBAC Modal State
+  const [rbacModalOpen, setRbacModalOpen] = useState(false);
+  const [rbacActionTitle, setRbacActionTitle] = useState('');
+  const [rbacRequiredRoles, setRbacRequiredRoles] = useState<UserRole[]>([]);
+  const [rbacExplanation, setRbacExplanation] = useState('');
 
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const q = query(collection(db, 'projects'), orderBy('createdAt', 'desc'));
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
-      setProjects(data);
+      const querySnapshot = await getDocs(collection(db, 'projects'));
+      const projs: Project[] = [];
+      querySnapshot.forEach((docSnap) => {
+        projs.push({ id: docSnap.id, ...docSnap.data() } as Project);
+      });
+      setProjects(projs);
     } catch (error) {
-      console.error('Error fetching projects:', error);
+      console.error("Error fetching projects: ", error);
     } finally {
       setLoading(false);
     }
@@ -39,8 +57,11 @@ export const Projects: React.FC = () => {
   }, []);
 
   const handleOpenCreate = () => {
-    if (role === 'Field Engineer') {
-      alert("Access Denied: Only Admins or Officers can create projects.");
+    if (!canCreateProject) {
+      setRbacActionTitle("Create Capital Project");
+      setRbacRequiredRoles(['Government Officer', 'Admin']);
+      setRbacExplanation("Initiating and allocating public funds for capital infrastructure projects is restricted to Government Officers and Administrators.");
+      setRbacModalOpen(true);
       return;
     }
     setSelectedProject(null);
@@ -48,8 +69,11 @@ export const Projects: React.FC = () => {
   };
 
   const handleOpenEdit = (project: Project) => {
-    if (role === 'Viewer') {
-      alert("Access Denied: Viewers cannot modify projects.");
+    if (!canEditProject) {
+      setRbacActionTitle("Modify Project Milestones");
+      setRbacRequiredRoles(['Government Officer', 'Contractor', 'Admin']);
+      setRbacExplanation("Updating project progress, contractor assignments, or budget metrics requires authorized contractor or officer credentials.");
+      setRbacModalOpen(true);
       return;
     }
     setSelectedProject(project);
@@ -57,8 +81,11 @@ export const Projects: React.FC = () => {
   };
 
   const handleDelete = async (projectId: string) => {
-    if (role !== 'Government Officer') {
-      alert("Access Denied: Only Government Officers can delete projects.");
+    if (!canDeleteProject) {
+      setRbacActionTitle("Delete Capital Project");
+      setRbacRequiredRoles(['Admin']);
+      setRbacExplanation("Deleting a capital project record requires Super Administrator authority.");
+      setRbacModalOpen(true);
       return;
     }
     if (!window.confirm("Are you sure you want to delete this project?")) {
@@ -107,6 +134,21 @@ export const Projects: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Public Citizen Notice Banner */}
+      {isPublicCitizen && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-900">
+          <div className="flex items-center gap-2.5">
+            <Eye className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <div>
+              <span className="font-bold">Public Project Tracking:</span> Citizens can view live progress percentages, contractor details, and expenditure transparency on public infrastructure works.
+            </div>
+          </div>
+          <span className="text-[11px] font-semibold text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded border border-blue-200 flex-shrink-0">
+            Civic Transparency
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -125,8 +167,10 @@ export const Projects: React.FC = () => {
           <button 
             onClick={handleOpenCreate} 
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
+            title={canCreateProject ? "Create New Capital Project" : "Restricted: Officer/Admin only"}
           >
-            <Plus className="w-4 h-4" /> New Project
+            {canCreateProject ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
+            New Project
           </button>
         </div>
       </div>
@@ -158,34 +202,34 @@ export const Projects: React.FC = () => {
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Allocated</p>
-            <p className="text-2xl font-bold text-slate-900">${(totalBudget / 1000000).toFixed(2)}M</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Allocated Budget</p>
+            <p className="text-2xl font-bold text-slate-900">₹{(totalBudget / 100000).toFixed(1)}L</p>
           </div>
         </div>
 
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-lg">
-            <HardHat className="w-6 h-6" />
+          <div className="p-3 bg-purple-50 text-purple-600 rounded-lg">
+            <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Total Disbursed</p>
-            <p className="text-2xl font-bold text-slate-900">${(totalSpent / 1000000).toFixed(2)}M</p>
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Disbursed Funds</p>
+            <p className="text-2xl font-bold text-slate-900">₹{(totalSpent / 100000).toFixed(1)}L</p>
           </div>
         </div>
       </div>
 
-      {/* Main Table Card */}
+      {/* Main Table View */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        {/* Search & Filter */}
-        <div className="p-4 border-b border-slate-200 flex flex-col md:flex-row gap-4 bg-slate-50/50 justify-between">
+        {/* Controls */}
+        <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between gap-4 bg-slate-50/50">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input 
-              type="text" 
-              placeholder="Search projects by title, contractor, or asset..." 
+            <input
+              type="text"
+              placeholder="Search projects by name, contractor, asset..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -194,9 +238,9 @@ export const Projects: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-slate-300 rounded-lg text-sm px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="All">All Stages</option>
+              <option value="All">All Statuses</option>
               <option value="Planning">Planning</option>
               <option value="Tender">Tender</option>
               <option value="Awarded">Awarded</option>
@@ -207,76 +251,62 @@ export const Projects: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-slate-500">Loading projects...</div>
+          <div className="p-12 text-center text-slate-500 text-sm">
+            Loading capital project records...
+          </div>
         ) : filteredProjects.length === 0 ? (
-          <div className="text-center py-16 px-4">
-            <FolderKanban className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-            <h3 className="text-base font-semibold text-slate-800">No projects found</h3>
-            <p className="text-sm text-slate-500 max-w-md mx-auto mt-1 mb-4">
-              {searchQuery || statusFilter !== 'All'
-                ? 'Try adjusting your search query or stage filter.'
-                : 'Get started by creating a new capital infrastructure project.'}
-            </p>
-            <button
-              onClick={handleOpenCreate}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium"
-            >
-              Initiate Project
-            </button>
+          <div className="p-12 text-center text-slate-500 text-sm">
+            No projects found matching the criteria.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Project Overview</th>
-                  <th className="py-3 px-4">Stage</th>
-                  <th className="py-3 px-4">Milestone Progress</th>
-                  <th className="py-3 px-4">Budget / Disbursed</th>
+                <tr className="bg-slate-50/75 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                  <th className="py-3 px-4">Project</th>
+                  <th className="py-3 px-4">Associated Asset</th>
+                  <th className="py-3 px-4">Stage / Status</th>
+                  <th className="py-3 px-4">Progress</th>
+                  <th className="py-3 px-4">Budget & Spent</th>
                   <th className="py-3 px-4">Contractor</th>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredProjects.map(p => (
+                {filteredProjects.map((p) => (
                   <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3.5 px-4 font-medium text-slate-900">
-                      <div>{p.name}</div>
-                      <div className="text-xs text-slate-400 font-normal line-clamp-1 mt-0.5">
-                        {p.departmentId} • Asset: {p.assetId}
-                      </div>
+                    <td className="py-3.5 px-4 font-semibold text-slate-900">
+                      {p.name}
+                      <span className="block text-xs font-normal text-slate-500">{p.departmentId}</span>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600 font-mono text-xs">
+                      {p.assetId}
                     </td>
                     <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                        p.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                        p.status === 'Construction' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                        p.status === 'Awarded' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                        'bg-slate-100 text-slate-700 border-slate-200'
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        p.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                        p.status === 'Construction' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                        'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>
                         {p.status}
                       </span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-36 bg-slate-200 rounded-full h-2 overflow-hidden">
+                      <div className="flex items-center gap-2">
+                        <div className="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
                           <div 
-                            className={`h-2 rounded-full transition-all duration-300 ${
-                              p.progressPercent >= 100 ? 'bg-emerald-500' :
-                              p.progressPercent >= 50 ? 'bg-blue-600' : 'bg-amber-500'
-                            }`}
+                            className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
                             style={{ width: `${p.progressPercent}%` }}
                           />
                         </div>
-                        <span className="text-xs font-bold text-slate-700 min-w-[32px]">
-                          {p.progressPercent}%
-                        </span>
+                        <span className="text-xs font-medium text-slate-700">{p.progressPercent}%</span>
                       </div>
                     </td>
-                    <td className="py-3.5 px-4 text-slate-800 text-xs font-mono">
-                      <div>${(Number(p.spent) || 0).toLocaleString()} spent</div>
-                      <div className="text-slate-400">of ${(Number(p.budget) || 0).toLocaleString()}</div>
-                    </td>
                     <td className="py-3.5 px-4 text-slate-600 text-xs">
+                      <div><strong className="text-slate-900">Budget:</strong> ₹{(p.budget || 0).toLocaleString()}</div>
+                      <div><strong className="text-slate-900">Spent:</strong> ₹{(p.spent || 0).toLocaleString()}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-600">
                       {p.contractor || 'TBD'}
                     </td>
                     <td className="py-3.5 px-4 text-right">
@@ -292,7 +322,7 @@ export const Projects: React.FC = () => {
                           onClick={() => handleDelete(p.id!)}
                           disabled={actionLoadingId === p.id}
                           className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete project"
+                          title="Delete project (Admin only)"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -312,6 +342,19 @@ export const Projects: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         projectToEdit={selectedProject}
         onSuccess={fetchProjects}
+      />
+
+      {/* RBAC Notice Modal */}
+      <RbacModal
+        isOpen={rbacModalOpen}
+        onClose={() => setRbacModalOpen(false)}
+        actionTitle={rbacActionTitle}
+        requiredRoles={rbacRequiredRoles}
+        explanation={rbacExplanation}
+        onRoleSwitched={() => {
+          if (rbacActionTitle === "Create Capital Project") setIsModalOpen(true);
+          if (rbacActionTitle === "Modify Project Milestones" && selectedProject) setIsModalOpen(true);
+        }}
       />
     </div>
   );

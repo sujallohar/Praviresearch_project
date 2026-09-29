@@ -1,37 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
+import { 
+  Building2, Plus, Search, Filter, 
+  MapPin, Pencil, Trash2, Eye, Download,
+  SlidersHorizontal, X, Wrench, Lock, ShieldAlert
+} from 'lucide-react';
 import { db } from '../lib/firebase';
+import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
 import type { Asset } from '../types';
 import { Link } from 'react-router-dom';
-import { 
-  Building2, Search, Filter, Plus, Pencil, 
-  Trash2, MapPin, Eye, Download, Wrench, RotateCcw 
-} from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, type UserRole } from '../context/AuthContext';
 import { AssetModal } from '../components/modals/AssetModal';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
+import { RbacModal } from '../components/modals/RbacModal';
 
 export const Assets: React.FC = () => {
-  const { role } = useAuth();
+  const { 
+    role, 
+    isPublicCitizen, 
+    canCreateAsset, 
+    canEditAsset, 
+    canDeleteAsset, 
+    canScheduleMaintenance 
+  } = useAuth();
+
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
-
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-
-  // Maintenance Modal
-  const [isMaintModalOpen, setIsMaintModalOpen] = useState(false);
-  const [maintAssetId, setMaintAssetId] = useState<string | undefined>();
-
-  // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [typeFilter, setTypeFilter] = useState('All');
   const [conditionFilter, setConditionFilter] = useState('All');
   const [riskFilter, setRiskFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Modals state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [isMaintModalOpen, setIsMaintModalOpen] = useState(false);
+  const [maintAssetId, setMaintAssetId] = useState<string | undefined>();
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+
+  // RBAC Modal state
+  const [rbacModalOpen, setRbacModalOpen] = useState(false);
+  const [rbacActionTitle, setRbacActionTitle] = useState('');
+  const [rbacRequiredRoles, setRbacRequiredRoles] = useState<UserRole[]>([]);
+  const [rbacExplanation, setRbacExplanation] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -44,8 +56,11 @@ export const Assets: React.FC = () => {
   }, []);
 
   const handleOpenCreate = () => {
-    if (role === 'Field Engineer') {
-      alert("Access Denied: Field Engineers do not have privileges to register new assets.");
+    if (!canCreateAsset) {
+      setRbacActionTitle("Register New Asset");
+      setRbacRequiredRoles(['Government Officer', 'Admin']);
+      setRbacExplanation("Registering new public capital assets requires departmental authority granted to Government Officers and System Administrators.");
+      setRbacModalOpen(true);
       return;
     }
     setSelectedAsset(null);
@@ -53,8 +68,11 @@ export const Assets: React.FC = () => {
   };
 
   const handleOpenEdit = (asset: Asset) => {
-    if (role === 'Viewer') {
-      alert("Access Denied: Viewers cannot modify asset records.");
+    if (!canEditAsset) {
+      setRbacActionTitle("Modify Asset Record");
+      setRbacRequiredRoles(['Government Officer', 'Admin']);
+      setRbacExplanation("Modifying official asset parameters and metadata requires Government Officer or Admin privileges.");
+      setRbacModalOpen(true);
       return;
     }
     setSelectedAsset(asset);
@@ -62,8 +80,11 @@ export const Assets: React.FC = () => {
   };
 
   const handleDelete = async (assetId: string) => {
-    if (role !== 'Government Officer') {
-      alert("Access Denied: Only Government Officers can delete assets.");
+    if (!canDeleteAsset) {
+      setRbacActionTitle("Delete Asset Record");
+      setRbacRequiredRoles(['Admin']);
+      setRbacExplanation("Permanently removing an asset from the public registry is an irreversible action restricted strictly to Super Administrators.");
+      setRbacModalOpen(true);
       return;
     }
     if (!window.confirm("Are you sure you want to permanently delete this asset record?")) {
@@ -77,6 +98,18 @@ export const Assets: React.FC = () => {
     } finally {
       setActionLoadingId(null);
     }
+  };
+
+  const handleTriggerMaintenance = (assetId: string) => {
+    if (!canScheduleMaintenance) {
+      setRbacActionTitle("Schedule Maintenance Work Order");
+      setRbacRequiredRoles(['Government Officer', 'Field Engineer', 'Admin']);
+      setRbacExplanation("Scheduling maintenance work orders requires operational authority held by Field Engineers, Officers, or Admins.");
+      setRbacModalOpen(true);
+      return;
+    }
+    setMaintAssetId(assetId);
+    setIsMaintModalOpen(true);
   };
 
   const handleExportCSV = () => {
@@ -120,6 +153,21 @@ export const Assets: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Public Citizen Notice Banner */}
+      {isPublicCitizen && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-blue-900">
+          <div className="flex items-center gap-2.5">
+            <Eye className="w-4 h-4 text-blue-600 flex-shrink-0" />
+            <div>
+              <span className="font-bold">Public Transparency View:</span> You are browsing verified government infrastructure records. Modifications and registrations are reserved for municipal officers.
+            </div>
+          </div>
+          <span className="text-[11px] font-semibold text-blue-700 bg-blue-100/60 px-2 py-0.5 rounded border border-blue-200 flex-shrink-0">
+            Open Data Portal
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -139,8 +187,9 @@ export const Assets: React.FC = () => {
           <button
             onClick={handleOpenCreate}
             className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
+            title={canCreateAsset ? "Register New Asset" : "Restricted: Officer/Admin only"}
           >
-            <Plus className="w-4 h-4" />
+            {canCreateAsset ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
             Register Asset
           </button>
         </div>
@@ -163,42 +212,41 @@ export const Assets: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border transition-all ${
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium border transition-colors ${
                 showFilters || hasActiveFilters
-                  ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
-                  : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                  ? 'bg-blue-50 border-blue-300 text-blue-700'
+                  : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
               }`}
             >
-              <Filter className="w-3.5 h-3.5" />
+              <SlidersHorizontal className="w-4 h-4" />
               <span>Filters</span>
               {hasActiveFilters && (
-                <span className="h-2 w-2 rounded-full bg-blue-600"></span>
+                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
               )}
             </button>
 
             {hasActiveFilters && (
               <button
                 onClick={resetFilters}
-                className="flex items-center gap-1 px-2.5 py-2 text-xs font-medium text-slate-500 hover:text-slate-800"
-                title="Reset all filters"
+                className="flex items-center gap-1 px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+                title="Reset all search filters"
               >
-                <RotateCcw className="w-3.5 h-3.5" /> Reset
+                <X className="w-3.5 h-3.5" />
+                Clear
               </button>
             )}
           </div>
         </div>
 
-        {/* Expandable Filters Tray */}
+        {/* Expandable Filter Tray */}
         {showFilters && (
-          <div className="p-4 bg-slate-50/80 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 animate-in fade-in duration-150">
+          <div className="p-4 border-b border-slate-200 bg-slate-50 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 animate-in slide-in-from-top-2 duration-150">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                Category
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Asset Category</label>
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
               >
                 <option value="All">All Categories</option>
                 {uniqueTypes.map(t => (
@@ -208,13 +256,11 @@ export const Assets: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                Condition
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Physical Condition</label>
               <select
                 value={conditionFilter}
                 onChange={(e) => setConditionFilter(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
               >
                 <option value="All">All Conditions</option>
                 <option value="Excellent">Excellent</option>
@@ -226,15 +272,13 @@ export const Assets: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                Risk Classification
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Risk Classification</label>
               <select
                 value={riskFilter}
                 onChange={(e) => setRiskFilter(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
               >
-                <option value="All">All Risk Levels</option>
+                <option value="All">All Risks</option>
                 <option value="Low">Low Risk</option>
                 <option value="Medium">Medium Risk</option>
                 <option value="High">High Risk</option>
@@ -242,18 +286,17 @@ export const Assets: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wider mb-1">
-                Lifecycle Stage
-              </label>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">Lifecycle Status</label>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-900 focus:ring-2 focus:ring-blue-500"
               >
-                <option value="All">All Stages</option>
+                <option value="All">All Statuses</option>
                 <option value="Planning">Planning</option>
                 <option value="Procurement">Procurement</option>
                 <option value="Implementation">Implementation</option>
+                <option value="Commissioning">Commissioning</option>
                 <option value="Operational">Operational</option>
                 <option value="Maintenance">Maintenance</option>
                 <option value="Retirement">Retirement</option>
@@ -262,17 +305,25 @@ export const Assets: React.FC = () => {
           </div>
         )}
 
-        {/* Content Table */}
+        {/* Results Counter */}
+        <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+          <span>Showing <strong>{filteredAssets.length}</strong> of {assets.length} assets</span>
+          {hasActiveFilters && <span className="text-blue-600 font-medium">Filters active</span>}
+        </div>
+
+        {/* Table Content */}
         {loading ? (
-          <div className="p-12 text-center text-slate-500">Loading assets...</div>
+          <div className="p-12 text-center text-slate-500 text-sm">
+            Loading public asset records...
+          </div>
         ) : filteredAssets.length === 0 ? (
-          <div className="p-12 text-center flex flex-col items-center">
-            <Building2 className="w-12 h-12 text-slate-300 mb-4" />
-            <h3 className="text-lg font-medium text-slate-900">No assets found</h3>
-            <p className="text-slate-500 mb-4 max-w-sm">
-              {hasActiveFilters
-                ? 'Try broadening your search or resetting active filters.'
-                : 'Get started by registering a new public infrastructure asset.'}
+          <div className="p-12 text-center">
+            <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-base font-semibold text-slate-800">No assets found</h3>
+            <p className="text-sm text-slate-500 mt-1 max-w-sm mx-auto mb-4">
+              {hasActiveFilters 
+                ? "No assets matched your filter criteria. Try resetting filters."
+                : "No government assets have been registered yet."}
             </p>
             {hasActiveFilters ? (
               <button
@@ -354,10 +405,7 @@ export const Assets: React.FC = () => {
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
-                          onClick={() => {
-                            setMaintAssetId(asset.id);
-                            setIsMaintModalOpen(true);
-                          }}
+                          onClick={() => handleTriggerMaintenance(asset.id!)}
                           className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
                           title="Schedule Maintenance"
                         >
@@ -381,7 +429,7 @@ export const Assets: React.FC = () => {
                           onClick={() => handleDelete(asset.id!)}
                           disabled={actionLoadingId === asset.id}
                           className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete asset"
+                          title="Delete asset (Admin only)"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -409,6 +457,19 @@ export const Assets: React.FC = () => {
         onClose={() => setIsMaintModalOpen(false)}
         defaultAssetId={maintAssetId}
         onSuccess={() => {}}
+      />
+
+      {/* RBAC Notice Modal */}
+      <RbacModal
+        isOpen={rbacModalOpen}
+        onClose={() => setRbacModalOpen(false)}
+        actionTitle={rbacActionTitle}
+        requiredRoles={rbacRequiredRoles}
+        explanation={rbacExplanation}
+        onRoleSwitched={() => {
+          if (rbacActionTitle === "Register New Asset") setIsModalOpen(true);
+          if (rbacActionTitle === "Modify Asset Record" && selectedAsset) setIsModalOpen(true);
+        }}
       />
     </div>
   );
