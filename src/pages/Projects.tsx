@@ -350,10 +350,6 @@ export const Projects: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
-        onRoleSwitched={() => {
-          if (rbacActionTitle === "Create Capital Project") setIsModalOpen(true);
-          if (rbacActionTitle === "Modify Project Milestones" && selectedProject) setIsModalOpen(true);
-        }}
       />
     </div>
   );

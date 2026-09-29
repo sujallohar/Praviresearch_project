@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Building2, FolderKanban, 
   AlertTriangle, ClipboardCheck, Wrench, 
   BarChart3, MessageSquare, LogOut, Megaphone, 
-  LogIn, Eye
+  LogIn, Eye, ShieldCheck
 } from 'lucide-react';
 
 const navItems = [
@@ -24,7 +24,7 @@ const navItems = [
 ];
 
 export const AppLayout: React.FC = () => {
-  const { logout, profile, role, currentUser, isPublicCitizen } = useAuth();
+  const { logout, profile, role, isAuthenticatedStaff, isPublicCitizen } = useAuth();
   const location = useLocation();
 
   return (
@@ -74,21 +74,23 @@ export const AppLayout: React.FC = () => {
         {/* Sidebar Footer User & Role Controls */}
         <div className="p-4 border-t border-slate-800 bg-slate-900/60">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold text-sm">
-              {profile?.name?.charAt(0).toUpperCase() || 'P'}
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
+              isAuthenticatedStaff ? 'bg-blue-600' : 'bg-slate-700'
+            }`}>
+              {isAuthenticatedStaff ? <ShieldCheck className="w-4 h-4 text-white" /> : 'C'}
             </div>
             <div className="overflow-hidden flex-1">
-              <p className="text-xs font-semibold truncate text-white">{profile?.name || 'Citizen User'}</p>
+              <p className="text-xs font-semibold truncate text-white">{profile?.name || 'Public Citizen'}</p>
               <p className="text-[11px] text-slate-400 truncate">{role}</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            {currentUser ? (
+            {isAuthenticatedStaff ? (
               <button 
                 onClick={logout}
                 className="flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-red-300 hover:bg-slate-800 w-full py-1.5 rounded transition-colors"
-                title="Sign out to return to Public Citizen mode"
+                title="Sign out of staff session and return to Public Citizen view"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Sign Out</span>
@@ -108,7 +110,7 @@ export const AppLayout: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 ml-64 overflow-auto bg-slate-50 min-h-screen flex flex-col">
-        {/* Sticky Header with Search, Role Switcher, and Notifications */}
+        {/* Sticky Header with Search, Role Badge, and Notifications */}
         <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 sm:px-8 sticky top-0 z-10 shadow-sm">
           <div className="flex-1 max-w-xl">
             <GlobalSearch />
@@ -116,26 +118,40 @@ export const AppLayout: React.FC = () => {
 
           <div className="flex items-center gap-3 sm:gap-4">
             {/* Public Portal Pill */}
-            {isPublicCitizen && (
+            {isPublicCitizen ? (
               <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium">
                 <Eye className="w-3.5 h-3.5 text-slate-500" />
-                <span>Public Mode</span>
+                <span>Public Citizen Mode</span>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                <span>Verified Authority</span>
               </div>
             )}
 
-            {/* Quick Staff Sign In Link if Guest */}
-            {!currentUser && (
+            {/* Role Badge (Read-Only Security Indicator) */}
+            <RoleSwitcher />
+
+            {/* Quick Staff Sign In / Sign Out Button */}
+            {isAuthenticatedStaff ? (
+              <button
+                onClick={logout}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-red-700 bg-slate-100 hover:bg-red-50 border border-slate-200 rounded-lg transition-colors"
+                title="Sign out of staff mode"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            ) : (
               <Link
                 to="/login"
-                className="hidden sm:inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Staff Sign In</span>
               </Link>
             )}
-
-            {/* Real-time RBAC Role Switcher */}
-            <RoleSwitcher />
 
             {/* Notifications Popover */}
             <NotificationPopover />

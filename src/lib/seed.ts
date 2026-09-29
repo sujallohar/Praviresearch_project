@@ -103,6 +103,6 @@ export const seedDemoData = async () => {
     return true;
   } catch (error) {
     console.error("Error seeding data:", error);
-    return false;
+    throw error;
   }
 };

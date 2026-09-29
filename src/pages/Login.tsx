@@ -11,7 +11,7 @@ import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'fire
 import { doc, setDoc } from 'firebase/firestore';
 
 export const Login: React.FC = () => {
-  const { loginAsDemoRole, switchRole } = useAuth();
+  const { loginAsStaffRole, logout } = useAuth();
   const navigate = useNavigate();
   const [isSignup, setIsSignup] = useState(false);
   
@@ -24,13 +24,13 @@ export const Login: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleContinueAsCitizen = () => {
-    switchRole('Viewer');
+  const handleContinueAsCitizen = async () => {
+    await logout();
     navigate('/');
   };
 
-  const handleQuickDemoLogin = (targetRole: UserRole) => {
-    loginAsDemoRole(targetRole);
+  const handleQuickDemoLogin = (targetRole: Exclude<UserRole, 'Viewer'>) => {
+    loginAsStaffRole(targetRole);
     navigate('/');
   };
 
@@ -50,7 +50,9 @@ export const Login: React.FC = () => {
           role,
           createdAt: new Date().toISOString()
         });
-        switchRole(role);
+        if (role !== 'Viewer') {
+          loginAsStaffRole(role as Exclude<UserRole, 'Viewer'>);
+        }
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }

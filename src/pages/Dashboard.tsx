@@ -103,7 +103,7 @@ export const Dashboard: React.FC = () => {
     canCreateAsset, 
     canCreateProject, 
     canScheduleMaintenance, 
-    switchRole 
+    logout 
   } = useAuth();
 
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -138,18 +138,27 @@ export const Dashboard: React.FC = () => {
     const unsubAssets = onSnapshot(collection(db, 'assets'), (snap) => {
       setAssets(snap.docs.map(d => ({ id: d.id, ...d.data() } as Asset)));
       setLoading(false);
+    }, (err) => {
+      console.warn("Assets snapshot error:", err);
+      setLoading(false);
     });
 
     const unsubProjects = onSnapshot(collection(db, 'projects'), (snap) => {
       setProjects(snap.docs.map(d => ({ id: d.id, ...d.data() } as Project)));
+    }, (err) => {
+      console.warn("Projects snapshot error:", err);
     });
 
     const unsubIssues = onSnapshot(collection(db, 'issues'), (snap) => {
       setIssues(snap.docs.map(d => ({ id: d.id, ...d.data() } as Issue)));
+    }, (err) => {
+      console.warn("Issues snapshot error:", err);
     });
 
     const unsubMaint = onSnapshot(collection(db, 'maintenanceRecords'), (snap) => {
       setMaintenance(snap.docs.map(d => ({ id: d.id, ...d.data() } as MaintenanceRecord)));
+    }, (err) => {
+      console.warn("Maintenance snapshot error:", err);
     });
 
     return () => {
@@ -165,6 +174,7 @@ export const Dashboard: React.FC = () => {
       setSeeding(true);
       await seedDemoData();
       setFitTrigger(prev => prev + 1);
+      alert("Demo data successfully loaded into Cloud Firestore!");
     } catch (err: any) {
       alert("Error seeding data: " + err.message);
     } finally {
@@ -273,27 +283,13 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="mt-4 pt-3 border-t border-blue-600/40 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-200">
-            <span>Evaluating as Staff or Engineer? Switch preview role:</span>
-            <div className="flex flex-wrap gap-1.5">
-              <button 
-                onClick={() => switchRole('Government Officer')} 
-                className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-semibold transition-colors"
-              >
-                👔 Government Officer
-              </button>
-              <button 
-                onClick={() => switchRole('Field Engineer')} 
-                className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-semibold transition-colors"
-              >
-                👷 Field Engineer
-              </button>
-              <button 
-                onClick={() => switchRole('Admin')} 
-                className="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded-md text-[11px] font-semibold transition-colors"
-              >
-                🛡️ Admin
-              </button>
-            </div>
+            <span>Are you a certified municipal officer or field inspector?</span>
+            <Link 
+              to="/login"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-900 hover:bg-blue-50 font-bold text-xs rounded-lg transition-colors shadow-xs"
+            >
+              Staff Login Portal →
+            </Link>
           </div>
         </div>
       ) : (
@@ -310,15 +306,15 @@ export const Dashboard: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                You have role-based operational permissions to manage lifecycle records and take actions.
+                You have verified operational permissions to manage records, inspections, and work orders.
               </p>
             </div>
           </div>
           <button
-            onClick={() => switchRole('Viewer')}
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+            onClick={logout}
+            className="text-xs font-semibold text-slate-600 hover:text-red-700 px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-red-50 transition-colors"
           >
-            Switch to Public Citizen View
+            Sign Out to Public View
           </button>
         </div>
       )}
@@ -789,12 +785,6 @@ export const Dashboard: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
-        onRoleSwitched={() => {
-          // If user switches role, automatically reopen the corresponding modal they attempted!
-          if (rbacActionTitle === "Register New Asset") setIsAssetModalOpen(true);
-          if (rbacActionTitle === "Schedule Maintenance Work") setIsMaintModalOpen(true);
-          if (rbacActionTitle === "Create New Capital Project") setIsProjectModalOpen(true);
-        }}
       />
     </div>
   );

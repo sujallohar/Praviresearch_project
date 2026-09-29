@@ -465,10 +465,6 @@ export const Assets: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
-        onRoleSwitched={() => {
-          if (rbacActionTitle === "Register New Asset") setIsModalOpen(true);
-          if (rbacActionTitle === "Modify Asset Record" && selectedAsset) setIsModalOpen(true);
-        }}
       />
     </div>
   );

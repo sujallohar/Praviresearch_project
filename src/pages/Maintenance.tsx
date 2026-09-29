@@ -387,10 +387,6 @@ export const Maintenance: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
-        onRoleSwitched={() => {
-          if (rbacActionTitle === "Schedule Maintenance Work Order") setIsModalOpen(true);
-          if (rbacActionTitle === "Modify Maintenance Record" && selectedRecord) setIsModalOpen(true);
-        }}
       />
     </div>
   );

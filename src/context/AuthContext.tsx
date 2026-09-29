@@ -14,7 +14,7 @@ export interface UserProfile {
   createdAt: string;
 }
 
-export const ROLE_PERSONAS: Record<UserRole, { name: string; email: string; department: string; title: string }> = {
+export const STAFF_PERSONAS: Record<Exclude<UserRole, 'Viewer'>, { name: string; email: string; department: string; title: string }> = {
   'Admin': {
     name: 'Rajesh Kumar',
     email: 'admin@govasset.gov.in',
@@ -38,13 +38,16 @@ export const ROLE_PERSONAS: Record<UserRole, { name: string; email: string; depa
     email: 'contractor@infraproject.com',
     department: 'Civil Infrastructure Works',
     title: 'Prime Contractor'
-  },
-  'Viewer': {
-    name: 'Public Citizen / Guest',
-    email: 'citizen@public.gov.in',
-    department: 'Civic Transparency Portal',
-    title: 'General Public Citizen'
   }
+};
+
+const CITIZEN_PROFILE: UserProfile = {
+  uid: 'public-citizen',
+  name: 'Public Citizen',
+  email: 'citizen@public.gov.in',
+  department: 'Civic Transparency Portal',
+  role: 'Viewer',
+  createdAt: new Date().toISOString()
 };
 
 interface AuthContextType {
@@ -52,9 +55,9 @@ interface AuthContextType {
   profile: UserProfile;
   role: UserRole;
   loading: boolean;
-  isGuest: boolean;
-  switchRole: (newRole: UserRole) => void;
-  loginAsDemoRole: (role: UserRole) => void;
+  isAuthenticatedStaff: boolean;
+  isPublicCitizen: boolean;
+  loginAsStaffRole: (role: Exclude<UserRole, 'Viewer'>) => void;
   logout: () => Promise<void>;
   // Granular Permission Helpers
   canCreateAsset: boolean;
@@ -67,7 +70,6 @@ interface AuthContextType {
   canScheduleMaintenance: boolean;
   canApproveBudget: boolean;
   canExportData: boolean;
-  isPublicCitizen: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -78,74 +80,60 @@ export const useAuth = () => {
   return context;
 };
 
-const DEFAULT_ROLE: UserRole = 'Viewer';
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // Initialize role from localStorage if previously chosen, or default to 'Viewer' (Public Citizen)
-  const [role, setRole] = useState<UserRole>(() => {
-    const savedRole = localStorage.getItem('govasset_active_role');
-    if (savedRole && ['Admin', 'Government Officer', 'Field Engineer', 'Contractor', 'Viewer'].includes(savedRole)) {
-      return savedRole as UserRole;
+  // Check if a staff session was saved
+  const [staffRole, setStaffRole] = useState<Exclude<UserRole, 'Viewer'> | null>(() => {
+    const saved = localStorage.getItem('govasset_staff_role');
+    if (saved && ['Admin', 'Government Officer', 'Field Engineer', 'Contractor'].includes(saved)) {
+      return saved as Exclude<UserRole, 'Viewer'>;
     }
-    return DEFAULT_ROLE;
+    return null;
   });
 
   const [profile, setProfile] = useState<UserProfile>(() => {
-    const persona = ROLE_PERSONAS[role] || ROLE_PERSONAS['Viewer'];
-    return {
-      uid: 'guest-citizen',
+    if (staffRole && STAFF_PERSONAS[staffRole]) {
+      const p = STAFF_PERSONAS[staffRole];
+      return {
+        uid: `staff-${staffRole.toLowerCase().replace(/\s+/g, '-')}`,
+        name: p.name,
+        email: p.email,
+        department: p.department,
+        role: staffRole,
+        createdAt: new Date().toISOString()
+      };
+    }
+    return CITIZEN_PROFILE;
+  });
+
+  const [loading, setLoading] = useState(false);
+
+  // Authenticate as a staff authority through the Login portal
+  const loginAsStaffRole = (targetRole: Exclude<UserRole, 'Viewer'>) => {
+    const persona = STAFF_PERSONAS[targetRole];
+    setStaffRole(targetRole);
+    localStorage.setItem('govasset_staff_role', targetRole);
+    setProfile({
+      uid: `staff-${targetRole.toLowerCase().replace(/\s+/g, '-')}`,
       name: persona.name,
       email: persona.email,
       department: persona.department,
-      role: role,
+      role: targetRole,
       createdAt: new Date().toISOString()
-    };
-  });
-
-  const [loading, setLoading] = useState(true);
-
-  // Switch role dynamically across the entire application
-  const switchRole = (newRole: UserRole) => {
-    setRole(newRole);
-    localStorage.setItem('govasset_active_role', newRole);
-    const persona = ROLE_PERSONAS[newRole];
-    setProfile(prev => ({
-      ...prev,
-      name: currentUser ? (prev.name || persona.name) : persona.name,
-      email: currentUser ? (prev.email || persona.email) : persona.email,
-      department: persona.department,
-      role: newRole
-    }));
-  };
-
-  // 1-Click login as demo role
-  const loginAsDemoRole = (targetRole: UserRole) => {
-    switchRole(targetRole);
-    // Fake mock user session if not in Firebase Auth
-    if (!currentUser) {
-      const persona = ROLE_PERSONAS[targetRole];
-      setProfile({
-        uid: `demo-${targetRole.toLowerCase().replace(/\s+/g, '-')}`,
-        name: persona.name,
-        email: persona.email,
-        department: persona.department,
-        role: targetRole,
-        createdAt: new Date().toISOString()
-      });
-    }
+    });
   };
 
   const logout = async () => {
     try {
       await signOut(auth);
-    } catch (e) {
+    } catch {
       // ignore
     }
+    localStorage.removeItem('govasset_staff_role');
     setCurrentUser(null);
-    // Revert to Public Citizen / Guest Viewer mode instead of breaking the app
-    switchRole('Viewer');
+    setStaffRole(null);
+    setProfile(CITIZEN_PROFILE);
   };
 
   useEffect(() => {
@@ -158,70 +146,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (docSnap.exists()) {
             const data = docSnap.data() as UserProfile;
             setProfile(data);
-            setRole(data.role);
-            localStorage.setItem('govasset_active_role', data.role);
-          } else {
-            // Default to Government Officer for authenticated users without profile
-            const currentSavedRole = (localStorage.getItem('govasset_active_role') as UserRole) || 'Government Officer';
-            setRole(currentSavedRole);
-            setProfile({
-              uid: user.uid,
-              name: user.displayName || user.email?.split('@')[0] || 'Government Officer',
-              email: user.email || 'officer@govasset.gov.in',
-              department: 'Public Works',
-              role: currentSavedRole,
-              createdAt: new Date().toISOString()
-            });
+            if (data.role !== 'Viewer') {
+              setStaffRole(data.role as Exclude<UserRole, 'Viewer'>);
+              localStorage.setItem('govasset_staff_role', data.role);
+            }
           }
         } catch (error) {
           console.error("Error fetching user profile", error);
         }
-      } else {
-        // Unauthenticated visitor: use active role (default Viewer / Public Citizen)
-        const currentSaved = (localStorage.getItem('govasset_active_role') as UserRole) || 'Viewer';
-        setRole(currentSaved);
-        const persona = ROLE_PERSONAS[currentSaved];
-        setProfile({
-          uid: 'guest-citizen',
-          name: persona.name,
-          email: persona.email,
-          department: persona.department,
-          role: currentSaved,
-          createdAt: new Date().toISOString()
-        });
       }
       setLoading(false);
     });
-    
+
     return unsubscribe;
   }, []);
 
-  // Permission flags based on active role
-  const isPublicCitizen = role === 'Viewer';
-  const isGuest = !currentUser && isPublicCitizen;
+  const activeRole: UserRole = staffRole || (currentUser ? 'Government Officer' : 'Viewer');
+  const isPublicCitizen = activeRole === 'Viewer';
+  const isAuthenticatedStaff = !isPublicCitizen;
 
-  const canCreateAsset = role === 'Admin' || role === 'Government Officer';
-  const canEditAsset = role === 'Admin' || role === 'Government Officer';
-  const canDeleteAsset = role === 'Admin';
+  // Strict Permissions
+  const canCreateAsset = activeRole === 'Admin' || activeRole === 'Government Officer';
+  const canEditAsset = activeRole === 'Admin' || activeRole === 'Government Officer';
+  const canDeleteAsset = activeRole === 'Admin';
 
-  const canCreateProject = role === 'Admin' || role === 'Government Officer';
-  const canEditProject = role === 'Admin' || role === 'Government Officer' || role === 'Contractor';
-  const canDeleteProject = role === 'Admin';
+  const canCreateProject = activeRole === 'Admin' || activeRole === 'Government Officer';
+  const canEditProject = activeRole === 'Admin' || activeRole === 'Government Officer' || activeRole === 'Contractor';
+  const canDeleteProject = activeRole === 'Admin';
 
-  const canLogInspection = role === 'Admin' || role === 'Field Engineer';
-  const canScheduleMaintenance = role === 'Admin' || role === 'Government Officer' || role === 'Field Engineer';
-  const canApproveBudget = role === 'Admin' || role === 'Government Officer';
-  const canExportData = role === 'Admin' || role === 'Government Officer';
+  const canLogInspection = activeRole === 'Admin' || activeRole === 'Field Engineer';
+  const canScheduleMaintenance = activeRole === 'Admin' || activeRole === 'Government Officer' || activeRole === 'Field Engineer';
+  const canApproveBudget = activeRole === 'Admin' || activeRole === 'Government Officer';
+  const canExportData = activeRole === 'Admin' || activeRole === 'Government Officer';
 
   return (
     <AuthContext.Provider value={{ 
       currentUser, 
       profile, 
-      role, 
+      role: activeRole, 
       loading, 
-      isGuest,
-      switchRole, 
-      loginAsDemoRole,
+      isAuthenticatedStaff,
+      isPublicCitizen,
+      loginAsStaffRole,
       logout,
       canCreateAsset,
       canEditAsset,
@@ -232,10 +198,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       canLogInspection,
       canScheduleMaintenance,
       canApproveBudget,
-      canExportData,
-      isPublicCitizen
+      canExportData
     }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

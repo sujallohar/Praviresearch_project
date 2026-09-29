@@ -312,10 +312,6 @@ export const Inspections: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
-        onRoleSwitched={() => {
-          if (rbacActionTitle === "Log Engineering Inspection") setIsModalOpen(true);
-          if (rbacActionTitle === "Modify Inspection Findings" && selectedInspection) setIsModalOpen(true);
-        }}
       />
     </div>
   );
