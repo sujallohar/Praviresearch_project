@@ -1,12 +1,16 @@
 // GovAsset 360 Enterprise Service Worker
-const CACHE_NAME = 'govasset360-pwa-v1';
+const CACHE_NAME = 'govasset360-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/favicon.png',
   '/favicon.svg',
+  '/icon-192.png',
   '/icon-192.svg',
-  '/icon-512.svg'
+  '/icon-512.png',
+  '/icon-512.svg',
+  '/apple-touch-icon.png'
 ];
 
 // Install: Cache critical app shell

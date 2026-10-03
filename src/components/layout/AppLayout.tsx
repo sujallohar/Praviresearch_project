@@ -13,11 +13,12 @@ import {
   AlertTriangle, ClipboardCheck, Wrench, 
   BarChart3, MessageSquare, LogOut, Megaphone, 
   LogIn, Eye, ShieldCheck, Menu, X, Camera, Sparkles, QrCode,
-  UserCheck, Shield
+  UserCheck, Shield, Info, Download
 } from 'lucide-react';
 import { QrScannerModal } from '../scanner/QrScannerModal';
 import { RoleRequestsManagerModal } from '../modals/RoleRequestsManagerModal';
 import { RequestRoleModal } from '../modals/RequestRoleModal';
+import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -29,6 +30,7 @@ const navItems = [
   { name: 'Maintenance', path: '/maintenance', icon: Wrench },
   { name: 'Reports', path: '/reports', icon: BarChart3 },
   { name: 'AI Assistant', path: '/assistant', icon: MessageSquare },
+  { name: 'About Architect', path: '/about', icon: Info, badge: 'Sujal' },
 ];
 
 // Bottom nav items for mobile quick access
@@ -36,8 +38,8 @@ const bottomNavItems = [
   { name: 'Home', path: '/', icon: LayoutDashboard },
   { name: 'Assets', path: '/assets', icon: Building2 },
   { name: 'Issues', path: '/issues', icon: AlertTriangle },
-  { name: 'Reports', path: '/reports', icon: BarChart3 },
   { name: 'AI', path: '/assistant', icon: MessageSquare },
+  { name: 'About', path: '/about', icon: Info },
 ];
 
 export const AppLayout: React.FC = () => {
@@ -186,6 +188,14 @@ export const AppLayout: React.FC = () => {
           >
             <QrCode className="w-3 h-3 text-amber-300" />
             Scan Asset QR
+          </button>
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('govasset:open-install'))}
+            className="w-full py-1.5 px-2.5 bg-gradient-to-r from-emerald-600/80 to-teal-600/80 hover:from-emerald-500 hover:to-teal-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all mt-1.5 shadow-xs"
+            title="Download & Install GovAsset 360 App on your phone or desktop ($0 Free)"
+          >
+            <Download className="w-3 h-3 text-white" />
+            Install Mobile App
           </button>
         </div>
 
@@ -347,6 +357,16 @@ export const AppLayout: React.FC = () => {
               </button>
             )}
 
+            {/* Download/Install PWA button */}
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('govasset:open-install'))}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition-colors shadow-2xs"
+              title="Download & Install GovAsset 360 App on Mobile or Desktop ($0 Free)"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden xl:inline">Install App</span>
+            </button>
+
             {/* Notifications Popover */}
             <NotificationPopover onOpenRoleRequests={() => setRoleRequestsModalOpen(true)} />
           </div>
@@ -428,6 +448,9 @@ export const AppLayout: React.FC = () => {
         isOpen={requestRoleModalOpen}
         onClose={() => setRequestRoleModalOpen(false)}
       />
+
+      {/* Progressive Web App Install Engine & Banner */}
+      <PwaInstallPrompt />
     </div>
   );
 };

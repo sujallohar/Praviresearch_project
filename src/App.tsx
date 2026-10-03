@@ -12,6 +12,7 @@ import { Inspections } from './pages/Inspections';
 import { Maintenance } from './pages/Maintenance';
 import { Assistant } from './pages/Assistant';
 import { Reports } from './pages/Reports';
+import { About } from './pages/About';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
             <Route path="maintenance" element={<Maintenance />} />
             <Route path="reports" element={<Reports />} />
             <Route path="assistant" element={<Assistant />} />
+            <Route path="about" element={<About />} />
           </Route>
         </Routes>
       </BrowserRouter>
