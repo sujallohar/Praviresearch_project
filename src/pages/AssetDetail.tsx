@@ -6,12 +6,13 @@ import type { Asset, Inspection, Issue, MaintenanceRecord, Project } from '../ty
 import { 
   Building2, ArrowLeft, Activity, MapPin, 
   ShieldAlert, CheckCircle2, Pencil, Plus, 
-  Wrench, ClipboardCheck, AlertTriangle, FolderKanban
+  Wrench, ClipboardCheck, AlertTriangle, FolderKanban, QrCode
 } from 'lucide-react';
 import { AssetModal } from '../components/modals/AssetModal';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { IssueModal } from '../components/modals/IssueModal';
 import { InspectionModal } from '../components/modals/InspectionModal';
+import { AssetQrTagModal } from '../components/assets/AssetQrTagModal';
 import { formatTimestamp } from '../utils/dateUtils';
 
 const tabs = ['Overview', 'Lifecycle', 'Inspections', 'Issues', 'Maintenance', 'Project'];
@@ -34,6 +35,7 @@ export const AssetDetail: React.FC = () => {
   const [isMaintModalOpen, setIsMaintModalOpen] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isInspModalOpen, setIsInspModalOpen] = useState(false);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   const fetchAssetAndRelated = async () => {
     if (!id) return;
@@ -136,17 +138,25 @@ export const AssetDetail: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsQrModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-sm"
+            title="Generate printable physical laminate QR badge"
+          >
+            <QrCode className="w-4 h-4 text-amber-300" />
+            <span>Physical QR Tag</span>
+          </button>
           <button
             onClick={() => setIsAssetModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-sm font-semibold transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-sm"
           >
             <Pencil className="w-4 h-4 text-slate-500" />
             Edit Asset
           </button>
           <button
             onClick={() => setIsMaintModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-sm"
           >
             <Plus className="w-4 h-4" />
             Schedule Work
@@ -505,6 +515,11 @@ export const AssetDetail: React.FC = () => {
         onClose={() => setIsInspModalOpen(false)}
         defaultAssetId={asset.id}
         onSuccess={fetchAssetAndRelated}
+      />
+      <AssetQrTagModal
+        isOpen={isQrModalOpen}
+        onClose={() => setIsQrModalOpen(false)}
+        asset={asset}
       />
     </div>
   );

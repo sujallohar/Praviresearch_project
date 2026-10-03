@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   Building2, Plus, Search, 
   MapPin, Pencil, Trash2, Eye, Download,
-  SlidersHorizontal, X, Wrench, Lock
+  SlidersHorizontal, X, Wrench, Lock, QrCode
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
@@ -12,6 +12,7 @@ import { useAuth, type UserRole } from '../context/AuthContext';
 import { AssetModal } from '../components/modals/AssetModal';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { RbacModal } from '../components/modals/RbacModal';
+import { AssetQrTagModal } from '../components/assets/AssetQrTagModal';
 
 export const Assets: React.FC = () => {
   const { 
@@ -37,6 +38,7 @@ export const Assets: React.FC = () => {
   const [isMaintModalOpen, setIsMaintModalOpen] = useState(false);
   const [maintAssetId, setMaintAssetId] = useState<string | undefined>();
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [qrModalAsset, setQrModalAsset] = useState<Asset | null>(null);
 
   // RBAC Modal state
   const [rbacModalOpen, setRbacModalOpen] = useState(false);
@@ -408,6 +410,13 @@ export const Assets: React.FC = () => {
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
+                          onClick={() => setQrModalAsset(asset)}
+                          className="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
+                          title="Generate printable physical laminate QR badge"
+                        >
+                          <QrCode className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleTriggerMaintenance(asset.id!)}
                           className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
                           title="Schedule Maintenance"
@@ -485,6 +494,13 @@ export const Assets: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-1 justify-end border-t border-slate-100 pt-2">
                   <button
+                    onClick={() => setQrModalAsset(asset)}
+                    className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                    title="Physical QR Tag"
+                  >
+                    <QrCode className="w-4 h-4" />
+                  </button>
+                  <button
                     onClick={() => handleTriggerMaintenance(asset.id!)}
                     className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                     title="Maintenance"
@@ -544,6 +560,13 @@ export const Assets: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
+      />
+
+      {/* Asset Physical Laminate QR Tag Modal */}
+      <AssetQrTagModal
+        isOpen={Boolean(qrModalAsset)}
+        onClose={() => setQrModalAsset(null)}
+        asset={qrModalAsset}
       />
     </div>
   );

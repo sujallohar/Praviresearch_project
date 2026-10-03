@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import type { Inspection } from '../types';
-import { ClipboardCheck, Plus, Search, Filter, Pencil, Trash2, Calendar, User, Download, Lock, Eye, Camera } from 'lucide-react';
+import type { Inspection, Asset } from '../types';
+import { 
+  ClipboardCheck, Plus, Search, Filter, Pencil, 
+  Trash2, Calendar, User, Download, Lock, 
+  Eye, Camera, FileDown, ShieldCheck, MapPin, Loader2 
+} from 'lucide-react';
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { InspectionModal } from '../components/modals/InspectionModal';
 import { RbacModal } from '../components/modals/RbacModal';
 import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanner';
 import { formatTimestamp } from '../utils/dateUtils';
+import { generateInspectionCertificate } from '../utils/pdfGenerator';
 
 export const Inspections: React.FC = () => {
   const { profile, role, isPublicCitizen, canLogInspection } = useAuth();
   const [inspections, setInspections] = useState<Inspection[]>([]);
+  const [assetsMap, setAssetsMap] = useState<Record<string, Asset>>({});
   const [loading, setLoading] = useState(true);
 
   // Modal State
@@ -23,6 +29,7 @@ export const Inspections: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [conditionFilter, setConditionFilter] = useState('All');
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [generatingPdfId, setGeneratingPdfId] = useState<string | null>(null);
 
   // RBAC Modal State
   const [rbacModalOpen, setRbacModalOpen] = useState(false);
@@ -30,13 +37,21 @@ export const Inspections: React.FC = () => {
   const [rbacRequiredRoles, setRbacRequiredRoles] = useState<UserRole[]>([]);
   const [rbacExplanation, setRbacExplanation] = useState('');
 
-  const fetchInspections = async () => {
+  const fetchInspectionsAndAssets = async () => {
     try {
       setLoading(true);
       const q = query(collection(db, 'inspections'), orderBy('date', 'desc'));
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Inspection));
       setInspections(data);
+
+      // Fetch assets dictionary for PDF generation & location reference
+      const assetsSnap = await getDocs(collection(db, 'assets'));
+      const dict: Record<string, Asset> = {};
+      assetsSnap.docs.forEach(d => {
+        dict[d.id] = { id: d.id, ...d.data() } as Asset;
+      });
+      setAssetsMap(dict);
     } catch (error) {
       console.error('Error fetching inspections:', error);
     } finally {
@@ -45,7 +60,7 @@ export const Inspections: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchInspections();
+    fetchInspectionsAndAssets();
   }, []);
 
   const handleOpenCreate = () => {
@@ -94,6 +109,23 @@ export const Inspections: React.FC = () => {
     }
   };
 
+  const handleDownloadCertificate = async (insp: Inspection) => {
+    try {
+      setGeneratingPdfId(insp.id || 'pdf');
+      const matchingAsset = assetsMap[insp.assetId] || null;
+      await generateInspectionCertificate({
+        inspection: insp,
+        asset: matchingAsset,
+        geofenceStatus: (insp as any).geofenceStatus || ((insp as any).geofenceVerified ? 'Verified On-Site Physical Presence (<250m)' : undefined)
+      });
+    } catch (err: any) {
+      console.error('Failed to generate PDF:', err);
+      alert('Could not generate PDF certificate: ' + err.message);
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
+
   const filteredInspections = inspections.filter(insp => {
     const query = searchQuery.toLowerCase();
     const matchesSearch = 
@@ -108,10 +140,10 @@ export const Inspections: React.FC = () => {
   });
 
   const handleExportCSV = () => {
-    const headers = "Inspection ID,Asset ID,Inspector,Date,Condition,Findings,Recommendations,Status\n";
+    const headers = "Inspection ID,Asset ID,Inspector,Date,Condition,Findings,Recommendations,Status,Geofence Verified\n";
     const rows = filteredInspections.map(i => {
       const date = i.date?.toDate ? new Date(i.date.toDate()).toISOString().split('T')[0] : '';
-      return `"${i.id}","${i.assetId}","${i.inspector}","${date}","${i.condition}","${(i.findings || '').replace(/"/g, '""')}","${(i.recommendation || '').replace(/"/g, '""')}","${i.status}"`;
+      return `"${i.id}","${i.assetId}","${i.inspector}","${date}","${i.condition}","${(i.findings || '').replace(/"/g, '""')}","${(i.recommendation || '').replace(/"/g, '""')}","${i.status}","${(i as any).geofenceVerified ? 'Yes' : 'No'}"`;
     }).join("\n");
     const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -142,7 +174,7 @@ export const Inspections: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Inspections & Audits</h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            Conduct on-site engineering assessments, structural evaluations, and safety audits.
+            Conduct on-site engineering assessments, GPS anti-fraud verified audits, and official certificates.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
@@ -232,6 +264,7 @@ export const Inspections: React.FC = () => {
                     <th className="py-3 px-4">Inspector</th>
                     <th className="py-3 px-4">Target Asset</th>
                     <th className="py-3 px-4">Assessed Condition</th>
+                    <th className="py-3 px-4">Anti-Fraud GPS</th>
                     <th className="py-3 px-4">Findings & Observations</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4 text-right">Actions</th>
@@ -240,6 +273,8 @@ export const Inspections: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {filteredInspections.map(insp => {
                     const dateStr = formatTimestamp(insp.date, 'N/A');
+                    const isGeoVerified = (insp as any).geofenceVerified;
+                    const isDownloadingThis = generatingPdfId === insp.id;
 
                     return (
                       <tr key={insp.id} className="hover:bg-slate-50 transition-colors">
@@ -268,6 +303,17 @@ export const Inspections: React.FC = () => {
                             {insp.condition}
                           </span>
                         </td>
+                        <td className="py-3.5 px-4">
+                          {isGeoVerified ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold" title="GPS verified on-site presence">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" /> On-Site
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200 text-[11px]" title="Audit log recorded">
+                              <MapPin className="w-3 h-3 text-slate-400" /> Logged
+                            </span>
+                          )}
+                        </td>
                         <td className="py-3.5 px-4 text-slate-600 max-w-xs">
                           <p className="line-clamp-2 text-xs">{insp.findings || 'No notes'}</p>
                         </td>
@@ -277,7 +323,19 @@ export const Inspections: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleDownloadCertificate(insp)}
+                              disabled={isDownloadingThis}
+                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              title="Download Official Audit Certificate (PDF with QR code)"
+                            >
+                              {isDownloadingThis ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                              ) : (
+                                <FileDown className="w-4 h-4" />
+                              )}
+                            </button>
                             <button
                               onClick={() => handleOpenEdit(insp)}
                               className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -306,6 +364,8 @@ export const Inspections: React.FC = () => {
             <div className="md:hidden divide-y divide-slate-100">
               {filteredInspections.map(insp => {
                 const dateStr = formatTimestamp(insp.date, 'N/A');
+                const isGeoVerified = (insp as any).geofenceVerified;
+                const isDownloadingThis = generatingPdfId === insp.id;
 
                 return (
                   <div key={insp.id} className="p-3 sm:p-4 hover:bg-slate-50 transition-colors">
@@ -315,8 +375,13 @@ export const Inspections: React.FC = () => {
                           <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span className="truncate">{insp.inspector}</span>
                         </div>
-                        <div className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
-                          Asset: {insp.assetId}
+                        <div className="text-[11px] text-slate-500 font-mono mt-0.5 truncate flex items-center gap-2">
+                          <span>Asset: {insp.assetId}</span>
+                          {isGeoVerified && (
+                            <span className="text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded text-[10px] font-bold border border-emerald-200">
+                              📍 On-Site Verified
+                            </span>
+                          )}
                         </div>
                       </div>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
@@ -341,6 +406,19 @@ export const Inspections: React.FC = () => {
                         <span>{dateStr}</span>
                       </div>
                       <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => handleDownloadCertificate(insp)}
+                          disabled={isDownloadingThis}
+                          className="flex items-center gap-1 px-2 py-1 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-md text-[11px] font-semibold transition-colors"
+                          title="Download Certificate"
+                        >
+                          {isDownloadingThis ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" />
+                          ) : (
+                            <FileDown className="w-3.5 h-3.5 text-blue-600" />
+                          )}
+                          <span>PDF</span>
+                        </button>
                         <button
                           onClick={() => handleOpenEdit(insp)}
                           className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
@@ -372,7 +450,7 @@ export const Inspections: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         inspectionToEdit={selectedInspection}
         defaultInspector={profile?.name}
-        onSuccess={fetchInspections}
+        onSuccess={fetchInspectionsAndAssets}
       />
 
       {/* RBAC Notice Modal */}

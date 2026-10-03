@@ -12,8 +12,9 @@ import {
   LayoutDashboard, Building2, FolderKanban, 
   AlertTriangle, ClipboardCheck, Wrench, 
   BarChart3, MessageSquare, LogOut, Megaphone, 
-  LogIn, Eye, ShieldCheck, Menu, X, Camera, Sparkles
+  LogIn, Eye, ShieldCheck, Menu, X, Camera, Sparkles, QrCode
 } from 'lucide-react';
+import { QrScannerModal } from '../scanner/QrScannerModal';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -41,6 +42,7 @@ export const AppLayout: React.FC = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [aiScannerOpen, setAiScannerOpen] = useState(false);
+  const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [prefilledInspection, setPrefilledInspection] = useState<any>(null);
@@ -168,10 +170,17 @@ export const AppLayout: React.FC = () => {
           </p>
           <button
             onClick={() => setAiScannerOpen(true)}
-            className="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+            className="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all mb-1.5"
           >
             <Sparkles className="w-3 h-3 text-amber-300" />
             Launch AI Scanner
+          </button>
+          <button
+            onClick={() => setQrScannerOpen(true)}
+            className="w-full py-1.5 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors border border-slate-700"
+          >
+            <QrCode className="w-3 h-3 text-amber-300" />
+            Scan Asset QR
           </button>
         </div>
 
@@ -272,6 +281,16 @@ export const AppLayout: React.FC = () => {
               )}
             </div>
 
+            {/* Scan Asset QR Code Button */}
+            <button
+              onClick={() => setQrScannerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+              title="Scan Physical Asset QR Tag"
+            >
+              <QrCode className="w-3.5 h-3.5 text-amber-300" />
+              <span className="hidden md:inline">Scan QR</span>
+            </button>
+
             {/* Quick AI Scanner Header Button */}
             <button
               onClick={() => setAiScannerOpen(true)}
@@ -344,6 +363,12 @@ export const AppLayout: React.FC = () => {
         onClose={() => setIssueModalOpen(false)}
         issueToEdit={prefilledIssue}
         onSuccess={() => {}}
+      />
+
+      {/* Asset Physical QR Code Scanner Modal */}
+      <QrScannerModal
+        isOpen={qrScannerOpen}
+        onClose={() => setQrScannerOpen(false)}
       />
     </div>
   );
