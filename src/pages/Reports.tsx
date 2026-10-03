@@ -15,6 +15,7 @@ import {
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { calculatePortfolioPredictiveMetrics } from '../utils/predictiveEngine';
+import { downloadBlob, downloadCsv } from '../utils/fileDownloader';
 
 const COLORS = ['#3b82f6', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -176,7 +177,9 @@ export const Reports: React.FC = () => {
       });
     }
 
-    doc.save(`GovAsset_Executive_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    const filename = `GovAsset_Executive_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+    const pdfBlob = doc.output('blob');
+    downloadBlob(pdfBlob, filename);
   };
 
   // CSV Export for Assets
@@ -185,12 +188,7 @@ export const Reports: React.FC = () => {
     const csvContent = filteredAssets.map(a => 
       `"${a.id}","${a.name}","${a.type}","${a.departmentId}","${a.location}","${a.condition}","${a.riskLevel}","${a.status}"`
     ).join("\n");
-    
-    const blob = new Blob([headers + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `GovAsset_Assets_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    downloadCsv(headers + csvContent, `GovAsset_Assets_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   // CSV Export for Projects
@@ -199,12 +197,7 @@ export const Reports: React.FC = () => {
     const csvContent = projects.map(p => 
       `"${p.name}","${p.contractor}","${p.departmentId}","${p.status}","${p.progressPercent}%","${p.spent}","${p.budget}"`
     ).join("\n");
-    
-    const blob = new Blob([headers + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `GovAsset_Projects_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    downloadCsv(headers + csvContent, `GovAsset_Projects_${new Date().toISOString().split('T')[0]}.csv`);
   };
 
   if (loading) {

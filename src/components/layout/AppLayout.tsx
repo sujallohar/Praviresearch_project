@@ -12,9 +12,12 @@ import {
   LayoutDashboard, Building2, FolderKanban, 
   AlertTriangle, ClipboardCheck, Wrench, 
   BarChart3, MessageSquare, LogOut, Megaphone, 
-  LogIn, Eye, ShieldCheck, Menu, X, Camera, Sparkles, QrCode
+  LogIn, Eye, ShieldCheck, Menu, X, Camera, Sparkles, QrCode,
+  UserCheck, Shield
 } from 'lucide-react';
 import { QrScannerModal } from '../scanner/QrScannerModal';
+import { RoleRequestsManagerModal } from '../modals/RoleRequestsManagerModal';
+import { RequestRoleModal } from '../modals/RequestRoleModal';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -45,6 +48,8 @@ export const AppLayout: React.FC = () => {
   const [qrScannerOpen, setQrScannerOpen] = useState(false);
   const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
   const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [roleRequestsModalOpen, setRoleRequestsModalOpen] = useState(false);
+  const [requestRoleModalOpen, setRequestRoleModalOpen] = useState(false);
   const [prefilledInspection, setPrefilledInspection] = useState<any>(null);
   const [prefilledIssue, setPrefilledIssue] = useState<any>(null);
 
@@ -218,6 +223,26 @@ export const AppLayout: React.FC = () => {
               </Link>
             )}
           </div>
+
+          {role === 'Admin' ? (
+            <button
+              onClick={() => setRoleRequestsModalOpen(true)}
+              className="w-full mt-2 py-1.5 px-2 text-[11px] font-semibold text-indigo-300 hover:text-white bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-700/50 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+              title="Review pending elevated authority requests"
+            >
+              <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Authority Approvals</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setRequestRoleModalOpen(true)}
+              className="w-full mt-2 py-1.5 px-2 text-[11px] font-semibold text-blue-300 hover:text-white bg-blue-950/50 hover:bg-blue-900 border border-blue-700/40 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+              title="Submit a role authorization request to the Admin"
+            >
+              <Shield className="w-3.5 h-3.5 text-blue-400" />
+              <span>Request Authority Role</span>
+            </button>
+          )}
         </div>
       </aside>
 
@@ -301,8 +326,29 @@ export const AppLayout: React.FC = () => {
               <span className="hidden sm:inline">AI Scanner</span>
             </button>
 
+            {/* Super Admin Access Approvals Button */}
+            {role === 'Admin' ? (
+              <button
+                onClick={() => setRoleRequestsModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-colors"
+                title="Review authority access requests from citizens & staff"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden lg:inline">Approvals</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setRequestRoleModalOpen(true)}
+                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-colors"
+                title="Request elevated authority from Head of Department"
+              >
+                <Shield className="w-3.5 h-3.5 text-blue-600" />
+                <span>Request Role</span>
+              </button>
+            )}
+
             {/* Notifications Popover */}
-            <NotificationPopover />
+            <NotificationPopover onOpenRoleRequests={() => setRoleRequestsModalOpen(true)} />
           </div>
         </header>
 
@@ -369,6 +415,18 @@ export const AppLayout: React.FC = () => {
       <QrScannerModal
         isOpen={qrScannerOpen}
         onClose={() => setQrScannerOpen(false)}
+      />
+
+      {/* Role Requests Approvals Modal (Admin Head) */}
+      <RoleRequestsManagerModal
+        isOpen={roleRequestsModalOpen}
+        onClose={() => setRoleRequestsModalOpen(false)}
+      />
+
+      {/* Request Elevated Staff Role Modal (Citizens & Staff) */}
+      <RequestRoleModal
+        isOpen={requestRoleModalOpen}
+        onClose={() => setRequestRoleModalOpen(false)}
       />
     </div>
   );

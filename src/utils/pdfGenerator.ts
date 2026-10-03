@@ -6,6 +6,7 @@ import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import type { Inspection, Asset } from '../types';
 import { formatTimestamp } from './dateUtils';
+import { downloadBlob } from './fileDownloader';
 
 export interface CertificateOptions {
   inspection: Inspection;
@@ -229,7 +230,8 @@ export async function generateInspectionCertificate(options: CertificateOptions)
   doc.setTextColor(71, 85, 105);
   doc.text('Authorized Municipal Auditor', pageWidth - 65, footerY + 24);
 
-  // Download PDF
+  // Download PDF reliably across all browsers & operating systems
   const filename = `GovAsset_Inspection_${(inspection.assetId || 'RECORD')}_${Date.now()}.pdf`;
-  doc.save(filename);
+  const blob = doc.output('blob');
+  downloadBlob(blob, filename);
 }

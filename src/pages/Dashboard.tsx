@@ -3,7 +3,7 @@ import {
   Building2, FolderKanban, AlertTriangle, 
   Activity, Database, MapPin, 
   Plus, ZoomIn, Eye, Wrench, ArrowUpRight, 
-  Megaphone, Lock, ShieldCheck, CheckCircle2
+  Megaphone, Lock, ShieldCheck, CheckCircle2, Upload
 } from 'lucide-react';
 import { seedDemoData } from '../lib/seed';
 import { db } from '../lib/firebase';
@@ -18,6 +18,7 @@ import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { IssueModal } from '../components/modals/IssueModal';
 import { ProjectModal } from '../components/modals/ProjectModal';
 import { RbacModal } from '../components/modals/RbacModal';
+import { BulkCsvImportModal } from '../components/assets/BulkCsvImportModal';
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { formatTimestamp } from '../utils/dateUtils';
 
@@ -124,6 +125,7 @@ export const Dashboard: React.FC = () => {
   const [isMaintModalOpen, setIsMaintModalOpen] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
   const [maintAssetId, setMaintAssetId] = useState<string | undefined>();
 
   // RBAC Permission Modal state
@@ -362,13 +364,21 @@ export const Dashboard: React.FC = () => {
             New Project
           </button>
           <button 
+            onClick={() => setIsCsvImportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold shadow-2xs transition-colors whitespace-nowrap flex-shrink-0"
+            title="Upload CSV / Excel data to Cloud Firestore"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Import CSV</span>
+          </button>
+          <button 
             onClick={handleSeed} 
             disabled={seeding}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0"
-            title="Reset to fresh demo dataset"
+            title="Idempotently seed standard municipal baseline assets"
           >
             <Database className="w-3.5 h-3.5 text-slate-500" /> 
-            {seeding ? 'Seeding...' : 'Reset Demo'}
+            {seeding ? 'Seeding...' : 'Load Baseline'}
           </button>
         </div>
       </div>
@@ -787,6 +797,13 @@ export const Dashboard: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
+      />
+
+      {/* Real Assets Bulk CSV / Excel Import Modal */}
+      <BulkCsvImportModal
+        isOpen={isCsvImportOpen}
+        onClose={() => setIsCsvImportOpen(false)}
+        onSuccess={() => {}}
       />
     </div>
   );

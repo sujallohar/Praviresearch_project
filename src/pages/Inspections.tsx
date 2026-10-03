@@ -13,6 +13,7 @@ import { RbacModal } from '../components/modals/RbacModal';
 import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanner';
 import { formatTimestamp } from '../utils/dateUtils';
 import { generateInspectionCertificate } from '../utils/pdfGenerator';
+import { downloadCsv } from '../utils/fileDownloader';
 
 export const Inspections: React.FC = () => {
   const { profile, role, isPublicCitizen, canLogInspection } = useAuth();
@@ -145,11 +146,8 @@ export const Inspections: React.FC = () => {
       const date = i.date?.toDate ? new Date(i.date.toDate()).toISOString().split('T')[0] : '';
       return `"${i.id}","${i.assetId}","${i.inspector}","${date}","${i.condition}","${(i.findings || '').replace(/"/g, '""')}","${(i.recommendation || '').replace(/"/g, '""')}","${i.status}","${(i as any).geofenceVerified ? 'Yes' : 'No'}"`;
     }).join("\n");
-    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `GovAsset_Inspections_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const filename = `GovAsset_Inspections_${new Date().toISOString().split('T')[0]}.csv`;
+    downloadCsv(headers + rows, filename);
   };
 
   return (

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   Building2, Plus, Search, 
   MapPin, Pencil, Trash2, Eye, Download,
-  SlidersHorizontal, X, Wrench, Lock, QrCode
+  SlidersHorizontal, X, Wrench, Lock, QrCode, Upload
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
@@ -13,6 +13,8 @@ import { AssetModal } from '../components/modals/AssetModal';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { RbacModal } from '../components/modals/RbacModal';
 import { AssetQrTagModal } from '../components/assets/AssetQrTagModal';
+import { BulkCsvImportModal } from '../components/assets/BulkCsvImportModal';
+import { downloadCsv } from '../utils/fileDownloader';
 
 export const Assets: React.FC = () => {
   const { 
@@ -39,6 +41,7 @@ export const Assets: React.FC = () => {
   const [maintAssetId, setMaintAssetId] = useState<string | undefined>();
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [qrModalAsset, setQrModalAsset] = useState<Asset | null>(null);
+  const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
 
   // RBAC Modal state
   const [rbacModalOpen, setRbacModalOpen] = useState(false);
@@ -118,11 +121,8 @@ export const Assets: React.FC = () => {
     const rows = filteredAssets.map(a => 
       `"${a.id}","${a.name}","${a.type}","${a.departmentId}","${a.location}","${a.status}","${a.condition}","${a.riskLevel}","${a.latitude || ''}","${a.longitude || ''}","${a.owner || ''}"`
     ).join("\n");
-    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `GovAsset_Registry_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
+    const filename = `GovAsset_Registry_${new Date().toISOString().split('T')[0]}.csv`;
+    downloadCsv(headers + rows, filename);
   };
 
   const resetFilters = () => {
@@ -177,7 +177,16 @@ export const Assets: React.FC = () => {
             Central repository of public infrastructure, facilities, and civic capital.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsCsvImportOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+            title="Upload CSV / Excel data to Cloud Firestore"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Import CSV</span>
+            <span className="sm:hidden">Import</span>
+          </button>
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
@@ -567,6 +576,13 @@ export const Assets: React.FC = () => {
         isOpen={Boolean(qrModalAsset)}
         onClose={() => setQrModalAsset(null)}
         asset={qrModalAsset}
+      />
+
+      {/* Real Assets Bulk CSV / Excel Import Modal */}
+      <BulkCsvImportModal
+        isOpen={isCsvImportOpen}
+        onClose={() => setIsCsvImportOpen(false)}
+        onSuccess={() => {}}
       />
     </div>
   );

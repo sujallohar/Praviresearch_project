@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, AlertTriangle, Wrench, Building2, Check, ExternalLink } from 'lucide-react';
-import { collection, getDocs, query, limit } from 'firebase/firestore';
+import { 
+  Bell, AlertTriangle, Wrench, Building2, Check, 
+  ExternalLink, UserCheck, Trash2 
+} from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
 
-interface AppNotification {
+export interface AppNotification {
   id: string;
-  type: 'issue' | 'maintenance' | 'asset';
+  type: 'issue' | 'maintenance' | 'asset' | 'role_request';
   title: string;
   description: string;
   time: string;
@@ -14,78 +17,130 @@ interface AppNotification {
   link: string;
 }
 
-export const NotificationPopover: React.FC = () => {
+interface NotificationPopoverProps {
+  onOpenRoleRequests?: () => void;
+}
+
+export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpenRoleRequests }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [readIds, setReadIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('govasset_read_notifs');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  // Save read notification IDs to localStorage
+  const persistReadIds = (newSet: Set<string>) => {
+    setReadIds(newSet);
+    try {
+      localStorage.setItem('govasset_read_notifs', JSON.stringify(Array.from(newSet)));
+    } catch {
+      // Ignore
+    }
+  };
+
   useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const notifs: AppNotification[] = [];
+    // 1. Real-time listener for unresolved issues
+    const unsubIssues = onSnapshot(collection(db, 'issues'), (snap) => {
+      const issueNotifs: AppNotification[] = [];
+      snap.docs.forEach((d) => {
+        const data = d.data();
+        if (data.status !== 'Resolved' && data.status !== 'Closed') {
+          issueNotifs.push({
+            id: `issue-${d.id}`,
+            type: 'issue',
+            title: `Issue Alert: ${data.title || 'Unresolved Issue'}`,
+            description: `Severity: ${data.severity || 'Medium'} • Location: ${data.location || 'Municipal Zone'}`,
+            time: 'Active Hazard',
+            unread: !readIds.has(`issue-${d.id}`),
+            link: '/issues'
+          });
+        }
+      });
 
-        // 1. Fetch critical issues
-        const issuesSnap = await getDocs(query(collection(db, 'issues'), limit(5)));
-        issuesSnap.docs.forEach((doc) => {
-          const data = doc.data();
-          if (data.status !== 'Resolved' && data.status !== 'Closed') {
-            notifs.push({
-              id: `issue-${doc.id}`,
-              type: 'issue',
-              title: `Issue Alert: ${data.title || 'Unresolved Issue'}`,
-              description: `Severity: ${data.severity || 'Medium'} • Reported by: ${data.reportedBy || 'Staff'}`,
-              time: 'Recent',
-              unread: true,
-              link: '/issues'
-            });
-          }
-        });
-
-        // 2. Fetch scheduled maintenance
-        const maintSnap = await getDocs(query(collection(db, 'maintenanceRecords'), limit(5)));
-        maintSnap.docs.forEach((doc) => {
-          const data = doc.data();
+      // 2. Real-time listener for maintenance
+      const unsubMaint = onSnapshot(collection(db, 'maintenanceRecords'), (maintSnap) => {
+        const maintNotifs: AppNotification[] = [];
+        maintSnap.docs.forEach((d) => {
+          const data = d.data();
           if (data.status === 'Scheduled' || data.status === 'In Progress') {
-            notifs.push({
-              id: `maint-${doc.id}`,
+            maintNotifs.push({
+              id: `maint-${d.id}`,
               type: 'maintenance',
               title: `Maintenance: ${data.type || 'Scheduled Task'}`,
-              description: `Contractor: ${data.contractor || 'Internal'} • Cost: $${data.cost || 0}`,
-              time: 'Scheduled',
-              unread: true,
+              description: `Contractor: ${data.contractor || 'Public Works'} • Cost: $${(data.cost || 0).toLocaleString()}`,
+              time: 'Scheduled Work',
+              unread: !readIds.has(`maint-${d.id}`),
               link: '/maintenance'
             });
           }
         });
 
-        // 3. Check for critical assets
-        const assetSnap = await getDocs(query(collection(db, 'assets'), limit(10)));
-        assetSnap.docs.forEach((doc) => {
-          const data = doc.data();
-          if (data.condition === 'Critical' || data.condition === 'Poor') {
-            notifs.push({
-              id: `asset-${doc.id}`,
-              type: 'asset',
-              title: `Asset Warning: ${data.name}`,
-              description: `Condition: ${data.condition} • Risk: ${data.riskLevel || 'High'}`,
-              time: 'Attention',
-              unread: true,
-              link: `/assets/${doc.id}`
+        // 3. Real-time listener for role access requests
+        const unsubRoles = onSnapshot(
+          query(collection(db, 'roleRequests'), orderBy('createdAt', 'desc'), limit(10)),
+          (roleSnap) => {
+            const roleNotifs: AppNotification[] = [];
+            roleSnap.docs.forEach((d) => {
+              const data = d.data();
+              if (data.status === 'Pending') {
+                roleNotifs.push({
+                  id: `role-${d.id}`,
+                  type: 'role_request',
+                  title: `Authority Request: ${data.userName || 'Staff Member'}`,
+                  description: `Requested: ${data.requestedRole} • ${data.justification || 'Pending Admin Approval'}`,
+                  time: 'Requires Approval',
+                  unread: !readIds.has(`role-${d.id}`),
+                  link: '#role-approval'
+                });
+              }
             });
+
+            // 4. Critical assets alert
+            const unsubAssets = onSnapshot(collection(db, 'assets'), (assetSnap) => {
+              const assetNotifs: AppNotification[] = [];
+              assetSnap.docs.forEach((d) => {
+                const data = d.data();
+                if (data.condition === 'Critical' || (data.riskLevel === 'High' && data.condition === 'Poor')) {
+                  assetNotifs.push({
+                    id: `asset-${d.id}`,
+                    type: 'asset',
+                    title: `Critical Infrastructure: ${data.name}`,
+                    description: `Condition: ${data.condition} • Risk: ${data.riskLevel || 'High'}`,
+                    time: 'Immediate Attention',
+                    unread: !readIds.has(`asset-${d.id}`),
+                    link: `/assets/${d.id}`
+                  });
+                }
+              });
+
+              // Combine all real-time alerts
+              const combined = [...roleNotifs, ...issueNotifs, ...assetNotifs, ...maintNotifs];
+              setNotifications(combined);
+            });
+
+            return () => unsubAssets();
+          },
+          (err) => {
+            console.warn('Role requests listener (optional):', err);
           }
-        });
+        );
 
-        setNotifications(notifs);
-        setUnreadCount(notifs.filter((n) => n.unread).length);
-      } catch (err) {
-        console.error('Error fetching notifications:', err);
-      }
-    };
+        return () => unsubRoles();
+      });
 
-    fetchNotifications();
-  }, []);
+      return () => unsubMaint();
+    });
+
+    return () => unsubIssues();
+  }, [readIds]);
 
   // Close when clicking outside
   useEffect(() => {
@@ -102,17 +157,34 @@ export const NotificationPopover: React.FC = () => {
     };
   }, [isOpen]);
 
+  const unreadCount = notifications.filter((n) => n.unread).length;
+
   const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-    setUnreadCount(0);
+    const allIds = new Set(readIds);
+    notifications.forEach((n) => allIds.add(n.id));
+    persistReadIds(allIds);
+  };
+
+  const clearAllNotifications = () => {
+    markAllAsRead();
+    setNotifications([]);
   };
 
   const handleNotificationClick = (notif: AppNotification) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, unread: false } : n))
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+    const allIds = new Set(readIds);
+    allIds.add(notif.id);
+    persistReadIds(allIds);
     setIsOpen(false);
+
+    if (notif.link === '#role-approval') {
+      if (onOpenRoleRequests) {
+        onOpenRoleRequests();
+      } else {
+        navigate('/reports');
+      }
+      return;
+    }
+
     navigate(notif.link);
   };
 
@@ -120,44 +192,66 @@ export const NotificationPopover: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-slate-500 hover:text-slate-800 transition-colors bg-slate-100 hover:bg-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-        aria-label="View notifications"
+        className="relative p-2 text-slate-600 hover:text-slate-900 transition-colors bg-slate-100 hover:bg-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+        aria-label="View notifications and alerts"
+        title="Live Municipal Alerts & Work Notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-white">
+          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 px-1 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white ring-2 ring-white animate-pulse">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-slate-50 border-b border-slate-200">
             <div className="flex items-center gap-2">
-              <h4 className="font-bold text-sm text-slate-900">Notifications</h4>
-              {unreadCount > 0 && (
-                <span className="px-1.5 py-0.5 text-[11px] font-semibold bg-blue-100 text-blue-800 rounded-full">
-                  {unreadCount} new
+              <h4 className="font-bold text-sm text-slate-900">Live Activity & Alerts</h4>
+              {unreadCount > 0 ? (
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-800 rounded-full">
+                  {unreadCount} unread
+                </span>
+              ) : (
+                <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-800 rounded-full">
+                  All caught up
                 </span>
               )}
             </div>
-            {unreadCount > 0 && (
-              <button
-                onClick={markAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-              >
-                <Check className="w-3.5 h-3.5" /> Mark all read
-              </button>
-            )}
+
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1"
+                  title="Mark all as read"
+                >
+                  <Check className="w-3.5 h-3.5" /> Read
+                </button>
+              )}
+              {notifications.length > 0 && (
+                <button
+                  onClick={clearAllNotifications}
+                  className="text-xs text-slate-400 hover:text-rose-600 transition-colors p-1"
+                  title="Clear notification list"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* List */}
           <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
             {notifications.length === 0 ? (
-              <div className="p-6 text-center text-slate-500 text-sm">
-                No active notifications or alerts.
+              <div className="p-8 text-center text-slate-500 text-xs">
+                <Check className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
+                <p className="font-semibold text-slate-700">No active alerts</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  New infrastructure issues, role requests, and scheduled work orders will appear here in real time.
+                </p>
               </div>
             ) : (
               notifications.map((notif) => (
@@ -165,11 +259,15 @@ export const NotificationPopover: React.FC = () => {
                   key={notif.id}
                   onClick={() => handleNotificationClick(notif)}
                   className={`p-3.5 hover:bg-slate-50 cursor-pointer transition-colors flex items-start gap-3 ${
-                    notif.unread ? 'bg-blue-50/40' : ''
+                    notif.unread ? 'bg-blue-50/50' : ''
                   }`}
                 >
                   <div className="mt-0.5 shrink-0">
-                    {notif.type === 'issue' ? (
+                    {notif.type === 'role_request' ? (
+                      <span className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                        <UserCheck className="w-4 h-4" />
+                      </span>
+                    ) : notif.type === 'issue' ? (
                       <span className="p-1.5 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
                         <AlertTriangle className="w-4 h-4" />
                       </span>
@@ -184,22 +282,24 @@ export const NotificationPopover: React.FC = () => {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-900 truncate">
-                      {notif.title}
-                    </p>
+                    <div className="flex items-center justify-between gap-1">
+                      <p className="text-xs font-bold text-slate-900 truncate">
+                        {notif.title}
+                      </p>
+                      {notif.unread && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600 shrink-0" />
+                      )}
+                    </div>
                     <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
                       {notif.description}
                     </p>
-                    <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
-                      <span>{notif.time}</span>
-                      <span className="text-blue-600 font-medium flex items-center gap-0.5">
-                        View <ExternalLink className="w-2.5 h-2.5" />
+                    <div className="flex items-center justify-between mt-1.5 text-[10px]">
+                      <span className="font-semibold text-slate-400">{notif.time}</span>
+                      <span className="text-blue-600 font-bold flex items-center gap-0.5">
+                        Open <ExternalLink className="w-2.5 h-2.5" />
                       </span>
                     </div>
                   </div>
-                  {notif.unread && (
-                    <span className="h-2 w-2 rounded-full bg-blue-600 shrink-0 mt-1.5" />
-                  )}
                 </div>
               ))
             )}
