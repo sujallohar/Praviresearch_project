@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { 
   Megaphone, CheckCircle2, Clock, AlertTriangle, 
   Building2, Wrench, Shield, Filter, 
-  MapPin, Sparkles, Eye
+  MapPin, Sparkles, Eye, Camera
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import type { Asset, Project, Issue, MaintenanceRecord } from '../types';
 import { IssueModal } from '../components/modals/IssueModal';
+import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanner';
 import { Link } from 'react-router-dom';
 import { formatTimestamp } from '../utils/dateUtils';
 
@@ -32,6 +33,8 @@ export const PublicUpdates: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedDept, setSelectedDept] = useState<string>('All');
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [isAiScannerOpen, setIsAiScannerOpen] = useState(false);
+  const [prefilledIssue, setPrefilledIssue] = useState<any>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -135,11 +138,21 @@ export const PublicUpdates: React.FC = () => {
 
           <div className="mt-5 flex flex-wrap gap-3">
             <button
-              onClick={() => setIsIssueModalOpen(true)}
+              onClick={() => {
+                setPrefilledIssue(null);
+                setIsIssueModalOpen(true);
+              }}
               className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-blue-900 hover:bg-blue-50 font-bold text-sm rounded-xl shadow-sm transition-all"
             >
               <AlertTriangle className="w-4 h-4 text-red-600" />
               Report a Civic Issue (Citizen)
+            </button>
+            <button
+              onClick={() => setIsAiScannerOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-400 to-orange-400 hover:from-amber-300 hover:to-orange-300 text-slate-950 font-bold text-sm rounded-xl shadow-md transition-all"
+            >
+              <Camera className="w-4 h-4 text-slate-950" />
+              AI Camera Defect Triage
             </button>
             <Link
               to="/assets"
@@ -292,7 +305,24 @@ export const PublicUpdates: React.FC = () => {
       <IssueModal
         isOpen={isIssueModalOpen}
         onClose={() => setIsIssueModalOpen(false)}
+        issueToEdit={prefilledIssue}
         onSuccess={() => {}}
+      />
+
+      {/* Edge AI Structural Defect Scanner Modal */}
+      <StructuralDefectScanner
+        isOpen={isAiScannerOpen}
+        onClose={() => setIsAiScannerOpen(false)}
+        onSelectForIssue={(data) => {
+          setPrefilledIssue({
+            title: data.title,
+            severity: data.severity,
+            description: data.description,
+            status: 'Open',
+            reportedBy: 'Citizen Reporter'
+          });
+          setIsIssueModalOpen(true);
+        }}
       />
     </div>
   );

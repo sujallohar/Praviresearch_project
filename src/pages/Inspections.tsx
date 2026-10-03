@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { Inspection } from '../types';
-import { ClipboardCheck, Plus, Search, Filter, Pencil, Trash2, Calendar, User, Download, Lock, Eye } from 'lucide-react';
+import { ClipboardCheck, Plus, Search, Filter, Pencil, Trash2, Calendar, User, Download, Lock, Eye, Camera } from 'lucide-react';
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { InspectionModal } from '../components/modals/InspectionModal';
 import { RbacModal } from '../components/modals/RbacModal';
+import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanner';
 import { formatTimestamp } from '../utils/dateUtils';
 
 export const Inspections: React.FC = () => {
@@ -15,6 +16,7 @@ export const Inspections: React.FC = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAiScannerOpen, setIsAiScannerOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<Inspection | null>(null);
 
   // Search & Filter State
@@ -149,6 +151,13 @@ export const Inspections: React.FC = () => {
             className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
           >
             <Download className="w-3.5 h-3.5" /> Export CSV
+          </button>
+          <button
+            onClick={() => setIsAiScannerOpen(true)}
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+            title="Scan structural defects using Edge AI Camera"
+          >
+            <Camera className="w-3.5 h-3.5" /> AI Camera Scan
           </button>
           <button
             onClick={handleOpenCreate}
@@ -373,6 +382,22 @@ export const Inspections: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
+      />
+
+      {/* Edge AI Structural Defect Scanner Modal */}
+      <StructuralDefectScanner
+        isOpen={isAiScannerOpen}
+        onClose={() => setIsAiScannerOpen(false)}
+        onSelectForInspection={(data) => {
+          setSelectedInspection({
+            condition: data.condition as any,
+            findings: data.findings,
+            recommendation: data.recommendation,
+            status: 'Completed',
+            inspector: profile?.name || 'Field Auditor'
+          } as any);
+          setIsModalOpen(true);
+        }}
       />
     </div>
   );

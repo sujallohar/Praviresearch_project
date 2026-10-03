@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   AlertTriangle, Plus, Search, Filter, 
-  Trash2, CheckCircle, Clock, Eye, Download
+  Trash2, CheckCircle, Clock, Eye, Download, Camera 
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
@@ -9,6 +9,7 @@ import type { Issue } from '../types';
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { IssueModal } from '../components/modals/IssueModal';
 import { RbacModal } from '../components/modals/RbacModal';
+import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanner';
 
 export const Issues: React.FC = () => {
   const { 
@@ -21,6 +22,8 @@ export const Issues: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAiScannerOpen, setIsAiScannerOpen] = useState(false);
+  const [prefilledIssue, setPrefilledIssue] = useState<any>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   // RBAC Modal State
@@ -153,7 +156,19 @@ export const Issues: React.FC = () => {
             <span className="sm:hidden">CSV</span>
           </button>
           <button 
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => setIsAiScannerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-600 to-red-600 hover:from-amber-500 hover:to-red-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+            title="Scan physical hazard using Edge AI Camera"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">AI Camera Scan</span>
+            <span className="sm:hidden">AI Scan</span>
+          </button>
+          <button 
+            onClick={() => {
+              setPrefilledIssue(null);
+              setIsModalOpen(true);
+            }}
             className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
             title="Open to all citizens and staff"
           >
@@ -364,6 +379,7 @@ export const Issues: React.FC = () => {
       <IssueModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        issueToEdit={prefilledIssue}
         onSuccess={() => {}}
       />
 
@@ -374,6 +390,22 @@ export const Issues: React.FC = () => {
         actionTitle={rbacActionTitle}
         requiredRoles={rbacRequiredRoles}
         explanation={rbacExplanation}
+      />
+
+      {/* Edge AI Structural Defect Scanner Modal */}
+      <StructuralDefectScanner
+        isOpen={isAiScannerOpen}
+        onClose={() => setIsAiScannerOpen(false)}
+        onSelectForIssue={(data) => {
+          setPrefilledIssue({
+            title: data.title,
+            severity: data.severity,
+            description: data.description,
+            status: 'Open',
+            reportedBy: 'Citizen Auditor'
+          });
+          setIsModalOpen(true);
+        }}
       />
     </div>
   );

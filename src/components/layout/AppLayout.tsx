@@ -5,11 +5,14 @@ import { GlobalSearch } from '../GlobalSearch';
 import { NotificationPopover } from '../NotificationPopover';
 import { RoleSwitcher } from '../RoleSwitcher';
 import { NetworkStatusBanner } from '../common/NetworkStatusBanner';
+import { StructuralDefectScanner } from '../ai/StructuralDefectScanner';
+import { InspectionModal } from '../modals/InspectionModal';
+import { IssueModal } from '../modals/IssueModal';
 import { 
   LayoutDashboard, Building2, FolderKanban, 
   AlertTriangle, ClipboardCheck, Wrench, 
   BarChart3, MessageSquare, LogOut, Megaphone, 
-  LogIn, Eye, ShieldCheck, Menu, X
+  LogIn, Eye, ShieldCheck, Menu, X, Camera, Sparkles
 } from 'lucide-react';
 
 const navItems = [
@@ -37,6 +40,33 @@ export const AppLayout: React.FC = () => {
   const { logout, profile, role, isAuthenticatedStaff, isPublicCitizen } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [aiScannerOpen, setAiScannerOpen] = useState(false);
+  const [inspectionModalOpen, setInspectionModalOpen] = useState(false);
+  const [issueModalOpen, setIssueModalOpen] = useState(false);
+  const [prefilledInspection, setPrefilledInspection] = useState<any>(null);
+  const [prefilledIssue, setPrefilledIssue] = useState<any>(null);
+
+  const handleSelectForInspection = (data: { condition: string; findings: string; recommendation: string }) => {
+    setPrefilledInspection({
+      condition: data.condition,
+      findings: data.findings,
+      recommendation: data.recommendation,
+      status: 'Completed',
+      inspector: profile?.name || 'Field Auditor'
+    });
+    setInspectionModalOpen(true);
+  };
+
+  const handleSelectForIssue = (data: { title: string; severity: string; description: string }) => {
+    setPrefilledIssue({
+      title: data.title,
+      severity: data.severity,
+      description: data.description,
+      reportedBy: profile?.name || 'Citizen Auditor',
+      status: 'Open'
+    });
+    setIssueModalOpen(true);
+  };
 
   // Auto-close sidebar on route change (mobile)
   useEffect(() => {
@@ -122,6 +152,28 @@ export const AppLayout: React.FC = () => {
             );
           })}
         </nav>
+
+        {/* AI Scanner Direct Launch Action in Sidebar */}
+        <div className="p-3 mx-2 my-2 bg-gradient-to-r from-blue-900/60 to-indigo-900/60 border border-blue-500/30 rounded-xl">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold text-blue-200 flex items-center gap-1.5">
+              <Camera className="w-3.5 h-3.5 text-blue-400" /> Edge AI Vision
+            </span>
+            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/30 text-emerald-300">
+              FREE
+            </span>
+          </div>
+          <p className="text-[10px] text-slate-300 mb-2 leading-tight">
+            Scan roads, concrete, & pipes for structural defects via live camera.
+          </p>
+          <button
+            onClick={() => setAiScannerOpen(true)}
+            className="w-full py-1.5 px-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-sm transition-all"
+          >
+            <Sparkles className="w-3 h-3 text-amber-300" />
+            Launch AI Scanner
+          </button>
+        </div>
 
         {/* Sidebar Footer User & Role Controls */}
         <div className="p-4 border-t border-slate-800 bg-slate-900/60">
@@ -220,6 +272,16 @@ export const AppLayout: React.FC = () => {
               )}
             </div>
 
+            {/* Quick AI Scanner Header Button */}
+            <button
+              onClick={() => setAiScannerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold shadow-sm transition-all animate-pulse"
+              title="Open Edge AI Structural Defect Scanner"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">AI Scanner</span>
+            </button>
+
             {/* Notifications Popover */}
             <NotificationPopover />
           </div>
@@ -259,6 +321,30 @@ export const AppLayout: React.FC = () => {
 
       {/* Offline and Cloud Sync Banner */}
       <NetworkStatusBanner />
+
+      {/* Edge AI Structural Defect Scanner Modal */}
+      <StructuralDefectScanner
+        isOpen={aiScannerOpen}
+        onClose={() => setAiScannerOpen(false)}
+        onSelectForInspection={handleSelectForInspection}
+        onSelectForIssue={handleSelectForIssue}
+      />
+
+      {/* Pre-filled Inspection Modal from AI */}
+      <InspectionModal
+        isOpen={inspectionModalOpen}
+        onClose={() => setInspectionModalOpen(false)}
+        inspectionToEdit={prefilledInspection}
+        onSuccess={() => {}}
+      />
+
+      {/* Pre-filled Issue Modal from AI */}
+      <IssueModal
+        isOpen={issueModalOpen}
+        onClose={() => setIssueModalOpen(false)}
+        issueToEdit={prefilledIssue}
+        onSuccess={() => {}}
+      />
     </div>
   );
 };
