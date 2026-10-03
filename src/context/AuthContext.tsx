@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase';
 import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 export type UserRole = 'Admin' | 'Government Officer' | 'Field Engineer' | 'Contractor' | 'Viewer';
 
@@ -14,32 +14,8 @@ export interface UserProfile {
   createdAt: string;
 }
 
-export const STAFF_PERSONAS: Record<Exclude<UserRole, 'Viewer'>, { name: string; email: string; department: string; title: string }> = {
-  'Admin': {
-    name: 'Rajesh Kumar',
-    email: 'admin@govasset.gov.in',
-    department: 'Central Municipal Administration',
-    title: 'Super Administrator'
-  },
-  'Government Officer': {
-    name: 'Ananya Sharma',
-    email: 'officer@govasset.gov.in',
-    department: 'Ministry of Road Transport & Urban Infra',
-    title: 'Executive Director'
-  },
-  'Field Engineer': {
-    name: 'Vikram Singh',
-    email: 'engineer@govasset.gov.in',
-    department: 'Public Works & Civil Engineering',
-    title: 'Senior Field Inspector'
-  },
-  'Contractor': {
-    name: 'Larsen & Infra Works',
-    email: 'contractor@infraproject.com',
-    department: 'Civil Infrastructure Works',
-    title: 'Prime Contractor'
-  }
-};
+// Security Rule: Only this single verified email address is permitted to hold Super Admin privileges
+export const SUPER_ADMIN_EMAIL = 'sujallohar17@gmail.com';
 
 const CITIZEN_PROFILE: UserProfile = {
   uid: 'public-citizen',
@@ -57,7 +33,7 @@ interface AuthContextType {
   loading: boolean;
   isAuthenticatedStaff: boolean;
   isPublicCitizen: boolean;
-  loginAsStaffRole: (role: Exclude<UserRole, 'Viewer'>) => void;
+  isSuperAdmin: boolean;
   logout: () => Promise<void>;
   // Granular Permission Helpers
   canCreateAsset: boolean;
@@ -82,47 +58,8 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  
-  // Check if a staff session was saved
-  const [staffRole, setStaffRole] = useState<Exclude<UserRole, 'Viewer'> | null>(() => {
-    const saved = localStorage.getItem('govasset_staff_role');
-    if (saved && ['Admin', 'Government Officer', 'Field Engineer', 'Contractor'].includes(saved)) {
-      return saved as Exclude<UserRole, 'Viewer'>;
-    }
-    return null;
-  });
-
-  const [profile, setProfile] = useState<UserProfile>(() => {
-    if (staffRole && STAFF_PERSONAS[staffRole]) {
-      const p = STAFF_PERSONAS[staffRole];
-      return {
-        uid: `staff-${staffRole.toLowerCase().replace(/\s+/g, '-')}`,
-        name: p.name,
-        email: p.email,
-        department: p.department,
-        role: staffRole,
-        createdAt: new Date().toISOString()
-      };
-    }
-    return CITIZEN_PROFILE;
-  });
-
-  const [loading, setLoading] = useState(false);
-
-  // Authenticate as a staff authority through the Login portal
-  const loginAsStaffRole = (targetRole: Exclude<UserRole, 'Viewer'>) => {
-    const persona = STAFF_PERSONAS[targetRole];
-    setStaffRole(targetRole);
-    localStorage.setItem('govasset_staff_role', targetRole);
-    setProfile({
-      uid: `staff-${targetRole.toLowerCase().replace(/\s+/g, '-')}`,
-      name: persona.name,
-      email: persona.email,
-      department: persona.department,
-      role: targetRole,
-      createdAt: new Date().toISOString()
-    });
-  };
+  const [profile, setProfile] = useState<UserProfile>(CITIZEN_PROFILE);
+  const [loading, setLoading] = useState(true);
 
   const logout = async () => {
     try {
@@ -130,54 +67,111 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch {
       // ignore
     }
-    localStorage.removeItem('govasset_staff_role');
     setCurrentUser(null);
-    setStaffRole(null);
     setProfile(CITIZEN_PROFILE);
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      if (user) {
-        try {
-          const docRef = doc(db, 'users', user.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data() as UserProfile;
-            setProfile(data);
-            if (data.role !== 'Viewer') {
-              setStaffRole(data.role as Exclude<UserRole, 'Viewer'>);
-              localStorage.setItem('govasset_staff_role', data.role);
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching user profile", error);
-        }
+
+      if (!user) {
+        // Public Citizen (Unauthenticated)
+        setProfile(CITIZEN_PROFILE);
+        setLoading(false);
+        return;
       }
-      setLoading(false);
+
+      const userEmail = user.email?.toLowerCase().trim() || '';
+      const isSuperAdminEmail = userEmail === SUPER_ADMIN_EMAIL.toLowerCase();
+
+      try {
+        const docRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(docRef);
+
+        if (isSuperAdminEmail) {
+          // Hard-lock: sujallohar17@gmail.com is ALWAYS Super Admin
+          const adminProfile: UserProfile = {
+            uid: user.uid,
+            name: docSnap.exists() && docSnap.data().name ? docSnap.data().name : 'Sujal Lohar',
+            email: user.email || SUPER_ADMIN_EMAIL,
+            department: 'Central Municipal Administration',
+            role: 'Admin',
+            createdAt: docSnap.exists() && docSnap.data().createdAt ? docSnap.data().createdAt : new Date().toISOString()
+          };
+
+          // Synchronize admin status in Firestore
+          await setDoc(docRef, {
+            ...adminProfile,
+            role: 'Admin',
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+
+          setProfile(adminProfile);
+        } else if (docSnap.exists()) {
+          const data = docSnap.data() as UserProfile;
+          // Security policy: If any other user has role 'Admin', forcefully downgrade to 'Government Officer'
+          const safeRole: UserRole = data.role === 'Admin' ? 'Government Officer' : (data.role || 'Government Officer');
+          
+          if (data.role === 'Admin') {
+            await setDoc(docRef, { role: safeRole, updatedAt: serverTimestamp() }, { merge: true });
+          }
+
+          setProfile({
+            uid: user.uid,
+            name: data.name || user.displayName || 'Authorized Staff',
+            email: user.email || '',
+            department: data.department || 'Public Works',
+            role: safeRole,
+            createdAt: data.createdAt || new Date().toISOString()
+          });
+        } else {
+          // New verified staff user without doc yet
+          const defaultStaffProfile: UserProfile = {
+            uid: user.uid,
+            name: user.displayName || 'Authorized Staff',
+            email: user.email || '',
+            department: 'Municipal Operations',
+            role: 'Government Officer',
+            createdAt: new Date().toISOString()
+          };
+
+          await setDoc(docRef, {
+            ...defaultStaffProfile,
+            createdAt: serverTimestamp()
+          });
+
+          setProfile(defaultStaffProfile);
+        }
+      } catch (error) {
+        console.error('Error synchronizing user profile:', error);
+      } finally {
+        setLoading(false);
+      }
     });
 
     return unsubscribe;
   }, []);
 
-  const activeRole: UserRole = staffRole || (currentUser ? 'Government Officer' : 'Viewer');
-  const isPublicCitizen = activeRole === 'Viewer';
+  // Compute Active Privileges
+  const isSuperAdmin = currentUser !== null && currentUser.email?.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase();
+  const isPublicCitizen = !currentUser || profile.role === 'Viewer';
   const isAuthenticatedStaff = !isPublicCitizen;
+  const activeRole: UserRole = isSuperAdmin ? 'Admin' : (isPublicCitizen ? 'Viewer' : profile.role);
 
-  // Strict Permissions
-  const canCreateAsset = activeRole === 'Admin' || activeRole === 'Government Officer';
-  const canEditAsset = activeRole === 'Admin' || activeRole === 'Government Officer';
-  const canDeleteAsset = activeRole === 'Admin';
+  // Strict Role Capabilities
+  const canCreateAsset = isSuperAdmin || activeRole === 'Government Officer';
+  const canEditAsset = isSuperAdmin || activeRole === 'Government Officer';
+  const canDeleteAsset = isSuperAdmin;
 
-  const canCreateProject = activeRole === 'Admin' || activeRole === 'Government Officer';
-  const canEditProject = activeRole === 'Admin' || activeRole === 'Government Officer' || activeRole === 'Contractor';
-  const canDeleteProject = activeRole === 'Admin';
+  const canCreateProject = isSuperAdmin || activeRole === 'Government Officer';
+  const canEditProject = isSuperAdmin || activeRole === 'Government Officer' || activeRole === 'Contractor';
+  const canDeleteProject = isSuperAdmin;
 
-  const canLogInspection = activeRole === 'Admin' || activeRole === 'Field Engineer';
-  const canScheduleMaintenance = activeRole === 'Admin' || activeRole === 'Government Officer' || activeRole === 'Field Engineer';
-  const canApproveBudget = activeRole === 'Admin' || activeRole === 'Government Officer';
-  const canExportData = activeRole === 'Admin' || activeRole === 'Government Officer';
+  const canLogInspection = isSuperAdmin || activeRole === 'Field Engineer';
+  const canScheduleMaintenance = isSuperAdmin || activeRole === 'Government Officer' || activeRole === 'Field Engineer';
+  const canApproveBudget = isSuperAdmin || activeRole === 'Government Officer';
+  const canExportData = isSuperAdmin || activeRole === 'Government Officer';
 
   return (
     <AuthContext.Provider value={{ 
@@ -187,7 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loading, 
       isAuthenticatedStaff,
       isPublicCitizen,
-      loginAsStaffRole,
+      isSuperAdmin,
       logout,
       canCreateAsset,
       canEditAsset,

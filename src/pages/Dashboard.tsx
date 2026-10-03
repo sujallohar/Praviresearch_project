@@ -3,7 +3,7 @@ import {
   Building2, FolderKanban, AlertTriangle, 
   Activity, Database, MapPin, 
   Plus, ZoomIn, Eye, Wrench, ArrowUpRight, 
-  Megaphone, Lock, ShieldCheck, CheckCircle2, Upload
+  Megaphone, ShieldCheck, CheckCircle2, Upload
 } from 'lucide-react';
 import { seedDemoData } from '../lib/seed';
 import { db } from '../lib/firebase';
@@ -102,6 +102,7 @@ export const Dashboard: React.FC = () => {
   const { 
     role, 
     isPublicCitizen, 
+    isSuperAdmin,
     canCreateAsset, 
     canCreateProject, 
     canScheduleMaintenance, 
@@ -331,55 +332,95 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex overflow-x-auto gap-2 pb-1 -mx-1 px-1 scrollbar-hide">
-          <button 
-            onClick={handleTriggerRegisterAsset}
-            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all whitespace-nowrap flex-shrink-0"
-            title={canCreateAsset ? "Register a new asset" : "Restricted: Officer/Admin only"}
-          >
-            {canCreateAsset ? <Plus className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5 opacity-80" />}
-            Register Asset
-          </button>
-          <button 
-            onClick={handleTriggerScheduleWork}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
-            title={canScheduleMaintenance ? "Schedule maintenance" : "Restricted: Engineer/Officer only"}
-          >
-            {canScheduleMaintenance ? <Wrench className="w-3.5 h-3.5 text-blue-600" /> : <Lock className="w-3.5 h-3.5 text-slate-400" />}
-            Schedule Work
-          </button>
-          <button 
-            onClick={() => setIsIssueModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
-            title="Open to everyone (Citizens & Staff)"
-          >
-            <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
-            Report Issue
-          </button>
-          <button 
-            onClick={handleTriggerNewProject}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
-            title={canCreateProject ? "New capital project" : "Restricted: Officer/Admin only"}
-          >
-            {canCreateProject ? <FolderKanban className="w-3.5 h-3.5 text-indigo-600" /> : <Lock className="w-3.5 h-3.5 text-slate-400" />}
-            New Project
-          </button>
-          <button 
-            onClick={() => setIsCsvImportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold shadow-2xs transition-colors whitespace-nowrap flex-shrink-0"
-            title="Upload CSV / Excel data to Cloud Firestore"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span>Import CSV</span>
-          </button>
-          <button 
-            onClick={handleSeed} 
-            disabled={seeding}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0"
-            title="Idempotently seed standard municipal baseline assets"
-          >
-            <Database className="w-3.5 h-3.5 text-slate-500" /> 
-            {seeding ? 'Seeding...' : 'Load Baseline'}
-          </button>
+          {/* Public Citizen View: Clean, Civic-Focused Actions */}
+          {isPublicCitizen ? (
+            <>
+              <button 
+                onClick={() => setIsIssueModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all whitespace-nowrap flex-shrink-0"
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                Report Civic Hazard
+              </button>
+              <Link 
+                to="/updates"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+              >
+                <Megaphone className="w-3.5 h-3.5 text-blue-600" />
+                Public Announcements
+              </Link>
+              <Link 
+                to="/assets"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+              >
+                <Building2 className="w-3.5 h-3.5 text-slate-600" />
+                Explore Infrastructure
+              </Link>
+            </>
+          ) : (
+            /* Authorized Staff & Super Admin Actions */
+            <>
+              {canCreateAsset && (
+                <button 
+                  onClick={handleTriggerRegisterAsset}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all whitespace-nowrap flex-shrink-0"
+                  title="Register new municipal infrastructure"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Register Asset
+                </button>
+              )}
+              {canScheduleMaintenance && (
+                <button 
+                  onClick={handleTriggerScheduleWork}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+                  title="Schedule maintenance or repair"
+                >
+                  <Wrench className="w-3.5 h-3.5 text-blue-600" />
+                  Schedule Work
+                </button>
+              )}
+              <button 
+                onClick={() => setIsIssueModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+                title="Log a field issue or structural defect"
+              >
+                <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                Report Issue
+              </button>
+              {canCreateProject && (
+                <button 
+                  onClick={handleTriggerNewProject}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+                  title="Initialize a new capital works project"
+                >
+                  <FolderKanban className="w-3.5 h-3.5 text-indigo-600" />
+                  New Project
+                </button>
+              )}
+              {isSuperAdmin && (
+                <>
+                  <button 
+                    onClick={() => setIsCsvImportOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold shadow-2xs transition-colors whitespace-nowrap flex-shrink-0"
+                    title="Upload CSV / Excel data to Cloud Firestore (Super Admin)"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Import CSV</span>
+                  </button>
+                  <button 
+                    onClick={handleSeed} 
+                    disabled={seeding}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+                    title="Idempotently seed standard municipal baseline assets (Super Admin)"
+                  >
+                    <Database className="w-3.5 h-3.5 text-slate-500" /> 
+                    <span>{seeding ? 'Seeding...' : 'Load Baseline'}</span>
+                  </button>
+                </>
+              )}
+            </>
+          )}
         </div>
       </div>
 

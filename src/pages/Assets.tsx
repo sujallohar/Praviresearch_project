@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   Building2, Plus, Search, 
   MapPin, Pencil, Trash2, Eye, Download,
-  SlidersHorizontal, X, Wrench, Lock, QrCode, Upload
+  SlidersHorizontal, X, Wrench, QrCode, Upload, AlertTriangle
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, deleteDoc } from 'firebase/firestore';
@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { AssetModal } from '../components/modals/AssetModal';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
+import { IssueModal } from '../components/modals/IssueModal';
 import { RbacModal } from '../components/modals/RbacModal';
 import { AssetQrTagModal } from '../components/assets/AssetQrTagModal';
 import { BulkCsvImportModal } from '../components/assets/BulkCsvImportModal';
@@ -19,6 +20,7 @@ import { downloadCsv } from '../utils/fileDownloader';
 export const Assets: React.FC = () => {
   const { 
     isPublicCitizen, 
+    isSuperAdmin,
     canCreateAsset, 
     canEditAsset, 
     canDeleteAsset, 
@@ -42,6 +44,8 @@ export const Assets: React.FC = () => {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [qrModalAsset, setQrModalAsset] = useState<Asset | null>(null);
   const [isCsvImportOpen, setIsCsvImportOpen] = useState(false);
+  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [issueAssetId, setIssueAssetId] = useState<string | undefined>();
 
   // RBAC Modal state
   const [rbacModalOpen, setRbacModalOpen] = useState(false);
@@ -178,15 +182,17 @@ export const Assets: React.FC = () => {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setIsCsvImportOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
-            title="Upload CSV / Excel data to Cloud Firestore"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Import CSV</span>
-            <span className="sm:hidden">Import</span>
-          </button>
+          {isSuperAdmin && (
+            <button
+              onClick={() => setIsCsvImportOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 rounded-lg text-xs font-semibold shadow-2xs transition-colors"
+              title="Upload CSV / Excel data to Cloud Firestore (Super Admin only)"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Import CSV</span>
+              <span className="sm:hidden">Import</span>
+            </button>
+          )}
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
@@ -195,15 +201,32 @@ export const Assets: React.FC = () => {
             <span className="hidden sm:inline">Export CSV</span>
             <span className="sm:hidden">CSV</span>
           </button>
-          <button
-            onClick={handleOpenCreate}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
-            title={canCreateAsset ? "Register New Asset" : "Restricted: Officer/Admin only"}
-          >
-            {canCreateAsset ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
-            <span className="hidden sm:inline">Register Asset</span>
-            <span className="sm:hidden">Add</span>
-          </button>
+          {isPublicCitizen ? (
+            <button
+              onClick={() => {
+                setIssueAssetId(undefined);
+                setIsIssueModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
+              title="Report an issue or damaged civic asset"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              <span className="hidden sm:inline">Report Civic Hazard</span>
+              <span className="sm:hidden">Report</span>
+            </button>
+          ) : (
+            canCreateAsset && (
+              <button
+                onClick={handleOpenCreate}
+                className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
+                title="Register New Asset"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden sm:inline">Register Asset</span>
+                <span className="sm:hidden">Add</span>
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -425,35 +448,56 @@ export const Assets: React.FC = () => {
                         >
                           <QrCode className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => handleTriggerMaintenance(asset.id!)}
-                          className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
-                          title="Schedule Maintenance"
-                        >
-                          <Wrench className="w-4 h-4" />
-                        </button>
                         <Link 
                           to={`/assets/${asset.id}`}
                           className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="View complete record & tabs"
+                          title="View complete record & specs"
                         >
                           <Eye className="w-4 h-4" />
                         </Link>
-                        <button
-                          onClick={() => handleOpenEdit(asset)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Edit asset properties"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(asset.id!)}
-                          disabled={actionLoadingId === asset.id}
-                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete asset (Admin only)"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isPublicCitizen ? (
+                          <button
+                            onClick={() => {
+                              setIssueAssetId(asset.id);
+                              setIsIssueModalOpen(true);
+                            }}
+                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Report hazard or issue for this asset"
+                          >
+                            <AlertTriangle className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <>
+                            {canScheduleMaintenance && (
+                              <button
+                                onClick={() => handleTriggerMaintenance(asset.id!)}
+                                className="p-1.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors"
+                                title="Schedule Maintenance"
+                              >
+                                <Wrench className="w-4 h-4" />
+                              </button>
+                            )}
+                            {canEditAsset && (
+                              <button
+                                onClick={() => handleOpenEdit(asset)}
+                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                title="Edit asset properties"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            )}
+                            {canDeleteAsset && (
+                              <button
+                                onClick={() => handleDelete(asset.id!)}
+                                disabled={actionLoadingId === asset.id}
+                                className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                title="Delete asset (Super Admin only)"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -509,13 +553,6 @@ export const Assets: React.FC = () => {
                   >
                     <QrCode className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => handleTriggerMaintenance(asset.id!)}
-                    className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                    title="Maintenance"
-                  >
-                    <Wrench className="w-4 h-4" />
-                  </button>
                   <Link 
                     to={`/assets/${asset.id}`}
                     className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -523,21 +560,49 @@ export const Assets: React.FC = () => {
                   >
                     <Eye className="w-4 h-4" />
                   </Link>
-                  <button
-                    onClick={() => handleOpenEdit(asset)}
-                    className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Edit"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(asset.id!)}
-                    disabled={actionLoadingId === asset.id}
-                    className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {isPublicCitizen ? (
+                    <button
+                      onClick={() => {
+                        setIssueAssetId(asset.id);
+                        setIsIssueModalOpen(true);
+                      }}
+                      className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Report Hazard"
+                    >
+                      <AlertTriangle className="w-4 h-4" />
+                    </button>
+                  ) : (
+                    <>
+                      {canScheduleMaintenance && (
+                        <button
+                          onClick={() => handleTriggerMaintenance(asset.id!)}
+                          className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                          title="Maintenance"
+                        >
+                          <Wrench className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canEditAsset && (
+                        <button
+                          onClick={() => handleOpenEdit(asset)}
+                          className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                      )}
+                      {canDeleteAsset && (
+                        <button
+                          onClick={() => handleDelete(asset.id!)}
+                          disabled={actionLoadingId === asset.id}
+                          className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             ))}
@@ -559,6 +624,14 @@ export const Assets: React.FC = () => {
         isOpen={isMaintModalOpen}
         onClose={() => setIsMaintModalOpen(false)}
         defaultAssetId={maintAssetId}
+        onSuccess={() => {}}
+      />
+
+      {/* Citizen Hazard Report Modal */}
+      <IssueModal
+        isOpen={isIssueModalOpen}
+        onClose={() => setIsIssueModalOpen(false)}
+        defaultAssetId={issueAssetId}
         onSuccess={() => {}}
       />
 

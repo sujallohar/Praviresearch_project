@@ -15,12 +15,19 @@ import { InspectionModal } from '../components/modals/InspectionModal';
 import { AssetQrTagModal } from '../components/assets/AssetQrTagModal';
 import { PredictiveLifecycleCard } from '../components/analytics/PredictiveLifecycleCard';
 import { formatTimestamp } from '../utils/dateUtils';
+import { useAuth } from '../context/AuthContext';
 
 const tabs = ['Overview', 'Lifecycle', 'Predictive AI', 'Inspections', 'Issues', 'Maintenance', 'Project'];
 
 export const AssetDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { 
+    isPublicCitizen, 
+    canEditAsset, 
+    canScheduleMaintenance, 
+    canLogInspection 
+  } = useAuth();
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('Overview');
@@ -148,20 +155,36 @@ export const AssetDetail: React.FC = () => {
             <QrCode className="w-4 h-4 text-amber-300" />
             <span>Physical QR Tag</span>
           </button>
-          <button
-            onClick={() => setIsAssetModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-sm"
-          >
-            <Pencil className="w-4 h-4 text-slate-500" />
-            Edit Asset
-          </button>
-          <button
-            onClick={() => setIsMaintModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            Schedule Work
-          </button>
+          {isPublicCitizen ? (
+            <button
+              onClick={() => setIsIssueModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-sm"
+            >
+              <AlertTriangle className="w-4 h-4" />
+              Report Issue
+            </button>
+          ) : (
+            <>
+              {canEditAsset && (
+                <button
+                  onClick={() => setIsAssetModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-sm"
+                >
+                  <Pencil className="w-4 h-4 text-slate-500" />
+                  Edit Asset
+                </button>
+              )}
+              {canScheduleMaintenance && (
+                <button
+                  onClick={() => setIsMaintModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold transition-colors shadow-sm"
+                >
+                  <Wrench className="w-4 h-4" />
+                  Schedule Work
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -336,12 +359,14 @@ export const AssetDetail: React.FC = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-base font-bold text-slate-900">Inspection History</h3>
-                <button
-                  onClick={() => setIsInspModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Log Inspection
-                </button>
+                {!isPublicCitizen && canLogInspection && (
+                  <button
+                    onClick={() => setIsInspModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Log Inspection
+                  </button>
+                )}
               </div>
 
               {inspections.length === 0 ? (
@@ -426,12 +451,14 @@ export const AssetDetail: React.FC = () => {
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h3 className="text-base font-bold text-slate-900">Maintenance Records</h3>
-                <button
-                  onClick={() => setIsMaintModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Schedule Task
-                </button>
+                {!isPublicCitizen && canScheduleMaintenance && (
+                  <button
+                    onClick={() => setIsMaintModalOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Schedule Task
+                  </button>
+                )}
               </div>
 
               {maintenance.length === 0 ? (

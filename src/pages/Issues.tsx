@@ -13,8 +13,8 @@ import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanne
 
 export const Issues: React.FC = () => {
   const { 
-    role, 
-    isPublicCitizen 
+    isPublicCitizen,
+    isSuperAdmin 
   } = useAuth();
 
   const [issues, setIssues] = useState<Issue[]>([]);
@@ -66,10 +66,10 @@ export const Issues: React.FC = () => {
   };
 
   const handleDeleteIssue = async (id: string) => {
-    if (role !== 'Admin') {
+    if (!isSuperAdmin) {
       setRbacActionTitle("Delete Civic Issue Record");
       setRbacRequiredRoles(['Admin']);
-      setRbacExplanation("Deleting public issue and incident audit records is restricted strictly to Administrators.");
+      setRbacExplanation("Deleting public issue and incident audit records is restricted strictly to Super Administrator (sujallohar17@gmail.com).");
       setRbacModalOpen(true);
       return;
     }
@@ -296,25 +296,33 @@ export const Issues: React.FC = () => {
                       {issue.assignedTo || 'Unassigned'}
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {issue.status !== 'Resolved' && (
-                          <button
-                            onClick={() => handleResolveIssue(issue.id!)}
-                            disabled={actionLoadingId === issue.id}
-                            className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded transition-colors"
-                          >
-                            Resolve
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleDeleteIssue(issue.id!)}
-                          disabled={actionLoadingId === issue.id}
-                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete issue (Admin only)"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                      {isPublicCitizen ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">
+                          Civic Record
+                        </span>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          {issue.status !== 'Resolved' && (
+                            <button
+                              onClick={() => handleResolveIssue(issue.id!)}
+                              disabled={actionLoadingId === issue.id}
+                              className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2.5 py-1 rounded transition-colors"
+                            >
+                              Resolve
+                            </button>
+                          )}
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => handleDeleteIssue(issue.id!)}
+                              disabled={actionLoadingId === issue.id}
+                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              title="Delete issue (Super Admin only)"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -350,24 +358,29 @@ export const Issues: React.FC = () => {
                   </span>
                   <span className="text-[10px] text-slate-500">{issue.assignedTo || 'Unassigned'}</span>
                 </div>
-                <div className="flex items-center gap-2 justify-end border-t border-slate-100 pt-2">
-                  {issue.status !== 'Resolved' && (
-                    <button
-                      onClick={() => handleResolveIssue(issue.id!)}
-                      disabled={actionLoadingId === issue.id}
-                      className="text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Resolve
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleDeleteIssue(issue.id!)}
-                    disabled={actionLoadingId === issue.id}
-                    className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                {!isPublicCitizen && (
+                  <div className="flex items-center gap-2 justify-end border-t border-slate-100 pt-2">
+                    {issue.status !== 'Resolved' && (
+                      <button
+                        onClick={() => handleResolveIssue(issue.id!)}
+                        disabled={actionLoadingId === issue.id}
+                        className="text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Resolve
+                      </button>
+                    )}
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => handleDeleteIssue(issue.id!)}
+                        disabled={actionLoadingId === issue.id}
+                        className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete (Super Admin only)"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

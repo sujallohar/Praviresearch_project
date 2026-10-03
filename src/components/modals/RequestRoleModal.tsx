@@ -79,7 +79,7 @@ export const RequestRoleModal: React.FC<RequestRoleModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Request Elevated Authority"
-      subtitle="Submit an official authorization request to the Municipal Administrator"
+      subtitle="Submit an official authorization request to Central Municipal Head (sujallohar17@gmail.com)"
       maxWidth="md"
     >
       {submitted ? (
@@ -89,7 +89,7 @@ export const RequestRoleModal: React.FC<RequestRoleModalProps> = ({
           </div>
           <h4 className="font-bold text-base text-slate-900">Authorization Request Dispatched!</h4>
           <p className="text-xs text-slate-600 max-w-sm mx-auto">
-            Your request for <strong className="text-blue-700">{role}</strong> credentials has been sent to the Central Municipal Head. You will receive real-time approval status via the notification bell.
+            Your request for <strong className="text-blue-700">{role}</strong> credentials has been sent to Central Municipal Head (<code className="font-mono text-blue-700 font-bold">sujallohar17@gmail.com</code>). You will be notified once reviewed.
           </p>
         </div>
       ) : (
@@ -104,7 +104,7 @@ export const RequestRoleModal: React.FC<RequestRoleModalProps> = ({
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-2.5 text-xs text-blue-900">
             <Shield className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
             <p>
-              Under Municipal Governance rules, actions such as logging official safety audits and commissioning capital works require certified staff approval from the Super Administrator.
+              Under Municipal Governance rules, actions such as logging official safety audits and commissioning capital works require certified staff approval from Super Administrator Sujal Lohar (<strong>sujallohar17@gmail.com</strong>).
             </p>
           </div>
 
@@ -140,12 +140,11 @@ export const RequestRoleModal: React.FC<RequestRoleModalProps> = ({
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as UserRole)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-xs text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-semibold text-blue-700"
               >
                 <option value="Field Engineer">Field Engineer (Conduct Audits & Inspections)</option>
                 <option value="Government Officer">Government Officer (Register Assets & Projects)</option>
-                <option value="Admin">Administrator (Super Admin Access)</option>
-                <option value="Contractor">Contractor (Execute Maintenance)</option>
+                <option value="Contractor">Prime Contractor (Execute Maintenance)</option>
               </select>
             </div>
 

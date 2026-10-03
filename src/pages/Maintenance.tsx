@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { MaintenanceRecord } from '../types';
-import { Wrench, Plus, Search, Filter, Pencil, Trash2, Calendar, DollarSign, CheckCircle2, Clock, Download, Lock, Eye } from 'lucide-react';
+import { Wrench, Plus, Search, Filter, Pencil, Trash2, Calendar, DollarSign, CheckCircle2, Clock, Download, Eye } from 'lucide-react';
 import { useAuth, type UserRole } from '../context/AuthContext';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { RbacModal } from '../components/modals/RbacModal';
 import { formatTimestamp } from '../utils/dateUtils';
 
 export const Maintenance: React.FC = () => {
-  const { role, isPublicCitizen, canScheduleMaintenance } = useAuth();
+  const { isPublicCitizen, isSuperAdmin, canScheduleMaintenance } = useAuth();
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -94,10 +94,10 @@ export const Maintenance: React.FC = () => {
   };
 
   const handleDelete = async (recordId: string) => {
-    if (role !== 'Admin') {
+    if (!isSuperAdmin) {
       setRbacActionTitle("Delete Maintenance Record");
       setRbacRequiredRoles(['Admin']);
-      setRbacExplanation("Deleting historical maintenance records and work orders is restricted exclusively to Administrators.");
+      setRbacExplanation("Deleting historical maintenance records and work orders is restricted exclusively to Super Administrator (sujallohar17@gmail.com).");
       setRbacModalOpen(true);
       return;
     }
@@ -177,14 +177,16 @@ export const Maintenance: React.FC = () => {
           >
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
-          <button
-            onClick={handleOpenCreate}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
-            title={canScheduleMaintenance ? "Schedule Maintenance" : "Restricted: Engineer/Officer only"}
-          >
-            {canScheduleMaintenance ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
-            Schedule Maintenance
-          </button>
+          {!isPublicCitizen && canScheduleMaintenance && (
+            <button
+              onClick={handleOpenCreate}
+              className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
+              title="Schedule Maintenance"
+            >
+              <Plus className="w-4 h-4" />
+              Schedule Maintenance
+            </button>
+          )}
         </div>
       </div>
 
@@ -335,32 +337,42 @@ export const Maintenance: React.FC = () => {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {record.status !== 'Completed' && (
-                              <button
-                                onClick={() => handleQuickStatusChange(record.id!, 'Completed')}
-                                disabled={actionLoadingId === record.id}
-                                className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition-colors"
-                              >
-                                Complete
-                              </button>
-                            )}
-                            <button
-                              onClick={() => handleOpenEdit(record)}
-                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                              title="Edit maintenance record"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(record.id!)}
-                              disabled={actionLoadingId === record.id}
-                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                              title="Delete record (Admin only)"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                          {isPublicCitizen ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Servicing Log
+                            </span>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1.5">
+                              {canScheduleMaintenance && record.status !== 'Completed' && (
+                                <button
+                                  onClick={() => handleQuickStatusChange(record.id!, 'Completed')}
+                                  disabled={actionLoadingId === record.id}
+                                  className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition-colors"
+                                >
+                                  Complete
+                                </button>
+                              )}
+                              {canScheduleMaintenance && (
+                                <button
+                                  onClick={() => handleOpenEdit(record)}
+                                  className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                  title="Edit maintenance record"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              )}
+                              {isSuperAdmin && (
+                                <button
+                                  onClick={() => handleDelete(record.id!)}
+                                  disabled={actionLoadingId === record.id}
+                                  className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                  title="Delete record (Super Admin only)"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     );
@@ -407,8 +419,9 @@ export const Maintenance: React.FC = () => {
                         </span>
                         <span className="text-[11px] text-slate-400">• {dateStr}</span>
                       </div>
+                    {!isPublicCitizen && (
                       <div className="flex items-center gap-1">
-                        {record.status !== 'Completed' && (
+                        {canScheduleMaintenance && record.status !== 'Completed' && (
                           <button
                             onClick={() => handleQuickStatusChange(record.id!, 'Completed')}
                             disabled={actionLoadingId === record.id}
@@ -417,22 +430,27 @@ export const Maintenance: React.FC = () => {
                             Done
                           </button>
                         )}
-                        <button
-                          onClick={() => handleOpenEdit(record)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Edit"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(record.id!)}
-                          disabled={actionLoadingId === record.id}
-                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canScheduleMaintenance && (
+                          <button
+                            onClick={() => handleOpenEdit(record)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                        {isSuperAdmin && (
+                          <button
+                            onClick={() => handleDelete(record.id!)}
+                            disabled={actionLoadingId === record.id}
+                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Delete (Super Admin only)"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
+                    )}
                     </div>
                   </div>
                 );

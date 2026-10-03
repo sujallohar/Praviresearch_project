@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   FolderKanban, Plus, Search, Filter, 
   Pencil, Trash2, TrendingUp, DollarSign, 
-  Clock, Download, Lock, Eye
+  Clock, Download, Eye
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
@@ -163,14 +163,16 @@ export const Projects: React.FC = () => {
           >
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
-          <button 
-            onClick={handleOpenCreate} 
-            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
-            title={canCreateProject ? "Create New Capital Project" : "Restricted: Officer/Admin only"}
-          >
-            {canCreateProject ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
-            New Project
-          </button>
+          {!isPublicCitizen && canCreateProject && (
+            <button 
+              onClick={handleOpenCreate} 
+              className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
+              title="Create New Capital Project"
+            >
+              <Plus className="w-4 h-4" />
+              New Project
+            </button>
+          )}
         </div>
       </div>
 
@@ -311,23 +313,33 @@ export const Projects: React.FC = () => {
                         {p.contractor || 'TBD'}
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleOpenEdit(p)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                            title="Edit project details and progress"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(p.id!)}
-                            disabled={actionLoadingId === p.id}
-                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Delete project (Admin only)"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {isPublicCitizen ? (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            Public Audit
+                          </span>
+                        ) : (
+                          <div className="flex items-center justify-end gap-2">
+                            {canEditProject && (
+                              <button
+                                onClick={() => handleOpenEdit(p)}
+                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                title="Edit project details and progress"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            )}
+                            {canDeleteProject && (
+                              <button
+                                onClick={() => handleDelete(p.id!)}
+                                disabled={actionLoadingId === p.id}
+                                className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                title="Delete project (Super Admin only)"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -375,23 +387,29 @@ export const Projects: React.FC = () => {
                     <div className="text-[11px] text-slate-500">
                       <span>Spent: <strong>₹{(p.spent || 0).toLocaleString()}</strong> / ₹{(p.budget || 0).toLocaleString()}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleOpenEdit(p)}
-                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                        title="Edit"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(p.id!)}
-                        disabled={actionLoadingId === p.id}
-                        className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+                    {!isPublicCitizen && (canEditProject || canDeleteProject) && (
+                      <div className="flex items-center gap-1">
+                        {canEditProject && (
+                          <button
+                            onClick={() => handleOpenEdit(p)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDeleteProject && (
+                          <button
+                            onClick={() => handleDelete(p.id!)}
+                            disabled={actionLoadingId === p.id}
+                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

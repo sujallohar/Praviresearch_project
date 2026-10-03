@@ -6,6 +6,7 @@ import {
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export interface AppNotification {
   id: string;
@@ -22,6 +23,7 @@ interface NotificationPopoverProps {
 }
 
 export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpenRoleRequests }) => {
+  const { isSuperAdmin } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [readIds, setReadIds] = useState<Set<string>>(() => {
@@ -47,13 +49,22 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpen
   };
 
   useEffect(() => {
-    // 1. Real-time listener for unresolved issues
+    let issueNotifs: AppNotification[] = [];
+    let maintNotifs: AppNotification[] = [];
+    let roleNotifs: AppNotification[] = [];
+    let assetNotifs: AppNotification[] = [];
+
+    const updateAll = () => {
+      setNotifications([...roleNotifs, ...issueNotifs, ...assetNotifs, ...maintNotifs]);
+    };
+
+    // 1. Issues
     const unsubIssues = onSnapshot(collection(db, 'issues'), (snap) => {
-      const issueNotifs: AppNotification[] = [];
+      const list: AppNotification[] = [];
       snap.docs.forEach((d) => {
         const data = d.data();
         if (data.status !== 'Resolved' && data.status !== 'Closed') {
-          issueNotifs.push({
+          list.push({
             id: `issue-${d.id}`,
             type: 'issue',
             title: `Issue Alert: ${data.title || 'Unresolved Issue'}`,
@@ -64,83 +75,89 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpen
           });
         }
       });
-
-      // 2. Real-time listener for maintenance
-      const unsubMaint = onSnapshot(collection(db, 'maintenanceRecords'), (maintSnap) => {
-        const maintNotifs: AppNotification[] = [];
-        maintSnap.docs.forEach((d) => {
-          const data = d.data();
-          if (data.status === 'Scheduled' || data.status === 'In Progress') {
-            maintNotifs.push({
-              id: `maint-${d.id}`,
-              type: 'maintenance',
-              title: `Maintenance: ${data.type || 'Scheduled Task'}`,
-              description: `Contractor: ${data.contractor || 'Public Works'} • Cost: $${(data.cost || 0).toLocaleString()}`,
-              time: 'Scheduled Work',
-              unread: !readIds.has(`maint-${d.id}`),
-              link: '/maintenance'
-            });
-          }
-        });
-
-        // 3. Real-time listener for role access requests
-        const unsubRoles = onSnapshot(
-          query(collection(db, 'roleRequests'), orderBy('createdAt', 'desc'), limit(10)),
-          (roleSnap) => {
-            const roleNotifs: AppNotification[] = [];
-            roleSnap.docs.forEach((d) => {
-              const data = d.data();
-              if (data.status === 'Pending') {
-                roleNotifs.push({
-                  id: `role-${d.id}`,
-                  type: 'role_request',
-                  title: `Authority Request: ${data.userName || 'Staff Member'}`,
-                  description: `Requested: ${data.requestedRole} • ${data.justification || 'Pending Admin Approval'}`,
-                  time: 'Requires Approval',
-                  unread: !readIds.has(`role-${d.id}`),
-                  link: '#role-approval'
-                });
-              }
-            });
-
-            // 4. Critical assets alert
-            const unsubAssets = onSnapshot(collection(db, 'assets'), (assetSnap) => {
-              const assetNotifs: AppNotification[] = [];
-              assetSnap.docs.forEach((d) => {
-                const data = d.data();
-                if (data.condition === 'Critical' || (data.riskLevel === 'High' && data.condition === 'Poor')) {
-                  assetNotifs.push({
-                    id: `asset-${d.id}`,
-                    type: 'asset',
-                    title: `Critical Infrastructure: ${data.name}`,
-                    description: `Condition: ${data.condition} • Risk: ${data.riskLevel || 'High'}`,
-                    time: 'Immediate Attention',
-                    unread: !readIds.has(`asset-${d.id}`),
-                    link: `/assets/${d.id}`
-                  });
-                }
-              });
-
-              // Combine all real-time alerts
-              const combined = [...roleNotifs, ...issueNotifs, ...assetNotifs, ...maintNotifs];
-              setNotifications(combined);
-            });
-
-            return () => unsubAssets();
-          },
-          (err) => {
-            console.warn('Role requests listener (optional):', err);
-          }
-        );
-
-        return () => unsubRoles();
-      });
-
-      return () => unsubMaint();
+      issueNotifs = list;
+      updateAll();
     });
 
-    return () => unsubIssues();
-  }, [readIds]);
+    // 2. Maintenance
+    const unsubMaint = onSnapshot(collection(db, 'maintenanceRecords'), (maintSnap) => {
+      const list: AppNotification[] = [];
+      maintSnap.docs.forEach((d) => {
+        const data = d.data();
+        if (data.status === 'Scheduled' || data.status === 'In Progress') {
+          list.push({
+            id: `maint-${d.id}`,
+            type: 'maintenance',
+            title: `Maintenance: ${data.type || 'Scheduled Task'}`,
+            description: `Contractor: ${data.contractor || 'Public Works'} • Cost: $${(data.cost || 0).toLocaleString()}`,
+            time: 'Scheduled Work',
+            unread: !readIds.has(`maint-${d.id}`),
+            link: '/maintenance'
+          });
+        }
+      });
+      maintNotifs = list;
+      updateAll();
+    });
+
+    // 3. Role requests (Only for Super Admin Sujal Lohar)
+    let unsubRoles = () => {};
+    if (isSuperAdmin) {
+      unsubRoles = onSnapshot(
+        query(collection(db, 'roleRequests'), orderBy('createdAt', 'desc'), limit(10)),
+        (roleSnap) => {
+          const list: AppNotification[] = [];
+          roleSnap.docs.forEach((d) => {
+            const data = d.data();
+            if (data.status === 'Pending') {
+              list.push({
+                id: `role-${d.id}`,
+                type: 'role_request',
+                title: `Authority Request: ${data.userName || 'Staff Member'}`,
+                description: `Requested: ${data.requestedRole} • ${data.justification || 'Pending Admin Approval'}`,
+                time: 'Requires Approval',
+                unread: !readIds.has(`role-${d.id}`),
+                link: '#role-approval'
+              });
+            }
+          });
+          roleNotifs = list;
+          updateAll();
+        },
+        (err) => {
+          console.warn('Role requests listener:', err);
+        }
+      );
+    }
+
+    // 4. Critical assets
+    const unsubAssets = onSnapshot(collection(db, 'assets'), (assetSnap) => {
+      const list: AppNotification[] = [];
+      assetSnap.docs.forEach((d) => {
+        const data = d.data();
+        if (data.condition === 'Critical' || (data.riskLevel === 'High' && data.condition === 'Poor')) {
+          list.push({
+            id: `asset-${d.id}`,
+            type: 'asset',
+            title: `Critical Infrastructure: ${data.name}`,
+            description: `Condition: ${data.condition} • Risk: ${data.riskLevel || 'High'}`,
+            time: 'Immediate Attention',
+            unread: !readIds.has(`asset-${d.id}`),
+            link: `/assets/${d.id}`
+          });
+        }
+      });
+      assetNotifs = list;
+      updateAll();
+    });
+
+    return () => {
+      unsubIssues();
+      unsubMaint();
+      unsubRoles();
+      unsubAssets();
+    };
+  }, [readIds, isSuperAdmin]);
 
   // Close when clicking outside
   useEffect(() => {

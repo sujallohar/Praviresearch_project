@@ -2,10 +2,67 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Open access for hackathon evaluation:
-    // Allows public citizen browsing, demo data seeding, and civic hazard reporting.
-    match /{document=**} {
-      allow read, write: if true;
+    // Helper function: Strictly checks if caller is Super Admin Sujal Lohar
+    function isSuperAdmin() {
+      return request.auth != null && request.auth.token.email != null && request.auth.token.email.lower() == 'sujallohar17@gmail.com';
+    }
+
+    // Helper function: Authenticated municipal staff
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Assets: Public citizens have read access; only authenticated staff can modify; only Super Admin can delete
+    match /assets/{assetId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Projects: Public transparency read; authenticated staff create/update; Super Admin deletes
+    match /projects/{projectId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Inspections: Public audit read; field staff write; Super Admin deletes
+    match /inspections/{inspectionId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Maintenance Records: Public servicing read; staff write; Super Admin deletes
+    match /maintenanceRecords/{recordId} {
+      allow read: if true;
+      allow create, update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Issues / Civic Hazard Reports: Anyone can report or browse; only staff can update/resolve; Super Admin deletes
+    match /issues/{issueId} {
+      allow read, create: if true;
+      allow update: if isAuthenticated();
+      allow delete: if isSuperAdmin();
+    }
+
+    // Role Verification Requests:
+    // Anyone can submit a request; ONLY Sujal Lohar (sujallohar17@gmail.com) can read, approve, or delete!
+    match /roleRequests/{requestId} {
+      allow create: if true;
+      allow read, update, delete: if isSuperAdmin();
+    }
+
+    // User Profiles:
+    // No one except Sujal Lohar can ever be created or updated with role 'Admin'
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && (
+        isSuperAdmin() || 
+        (request.auth.uid == userId && (!('role' in request.resource.data) || request.resource.data.role != 'Admin'))
+      );
+      allow delete: if isSuperAdmin();
     }
   }
 }

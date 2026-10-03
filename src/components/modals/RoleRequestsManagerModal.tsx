@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { 
   Check, X, Shield, 
-  Loader2, Building2, CheckCircle2 
+  Loader2, Building2, CheckCircle2, ShieldAlert
 } from 'lucide-react';
 import { collection, onSnapshot, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { useAuth, type UserRole } from '../../context/AuthContext';
+import { useAuth, type UserRole, SUPER_ADMIN_EMAIL } from '../../context/AuthContext';
 
 interface RoleRequestItem {
   id: string;
@@ -30,14 +30,14 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
   isOpen,
   onClose
 }) => {
-  const { profile, loginAsStaffRole } = useAuth();
+  const { currentUser, isSuperAdmin } = useAuth();
   const [requests, setRequests] = useState<RoleRequestItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [grantedMessage, setGrantedMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isSuperAdmin) return;
 
     setLoading(true);
     const unsub = onSnapshot(collection(db, 'roleRequests'), (snap) => {
@@ -52,19 +52,61 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
     });
 
     return () => unsub();
-  }, [isOpen]);
+  }, [isOpen, isSuperAdmin]);
 
   if (!isOpen) return null;
 
+  // Strict Security Gate: Only Sujal Lohar (sujallohar17@gmail.com) can access
+  if (!isSuperAdmin) {
+    return (
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title="Security Access Denied"
+        subtitle="Policy Violation • Unauthorized Access Attempt"
+        maxWidth="md"
+      >
+        <div className="p-6 text-center space-y-4">
+          <div className="w-14 h-14 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-7 h-7" />
+          </div>
+          <h4 className="font-bold text-slate-900 text-base">
+            Restricted to Master Super Administrator
+          </h4>
+          <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed">
+            Only the verified Central Municipal Head (<strong className="text-blue-700 font-mono">{SUPER_ADMIN_EMAIL}</strong>) has security credentials to review, grant, or revoke municipal authority permissions.
+          </p>
+          <div className="pt-2">
+            <button
+              onClick={onClose}
+              className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-colors"
+            >
+              Close Panel
+            </button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
+
   const handleGrantRole = async (req: RoleRequestItem) => {
+    if (!isSuperAdmin) {
+      alert(`Security Violation: Only ${SUPER_ADMIN_EMAIL} can grant permissions.`);
+      return;
+    }
+
     try {
       setActionLoadingId(req.id);
+
+      // Security enforcement: Nobody can ever be elevated to Admin except sujallohar17@gmail.com
+      const approvedRole: UserRole = req.requestedRole === 'Admin' ? 'Government Officer' : req.requestedRole;
 
       // 1. Update the request record in Cloud Firestore
       await updateDoc(doc(db, 'roleRequests', req.id), {
         status: 'Approved',
+        grantedRole: approvedRole,
         reviewedAt: serverTimestamp(),
-        reviewedBy: profile?.name || 'Central Municipal Head'
+        reviewedBy: currentUser?.email || SUPER_ADMIN_EMAIL
       });
 
       // 2. Update user profile in Firestore
@@ -74,17 +116,12 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
           name: req.userName,
           email: req.userEmail,
           department: req.department,
-          role: req.requestedRole,
+          role: approvedRole,
           updatedAt: serverTimestamp()
         }, { merge: true });
       }
 
-      // 3. If the currently active user is the applicant, switch their role immediately
-      if (req.requestedRole !== 'Viewer') {
-        loginAsStaffRole(req.requestedRole as Exclude<UserRole, 'Viewer'>);
-      }
-
-      setGrantedMessage(`Authority granted! ${req.userName} is now approved as a ${req.requestedRole}.`);
+      setGrantedMessage(`Authority granted! ${req.userName} is now approved as a ${approvedRole}.`);
       setTimeout(() => setGrantedMessage(null), 4000);
     } catch (err: any) {
       console.error('Failed to grant role:', err);
@@ -95,12 +132,17 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
   };
 
   const handleDeclineRole = async (req: RoleRequestItem) => {
+    if (!isSuperAdmin) {
+      alert(`Security Violation: Only ${SUPER_ADMIN_EMAIL} can decline requests.`);
+      return;
+    }
+
     try {
       setActionLoadingId(req.id);
       await updateDoc(doc(db, 'roleRequests', req.id), {
         status: 'Rejected',
         reviewedAt: serverTimestamp(),
-        reviewedBy: profile?.name || 'Central Municipal Head'
+        reviewedBy: currentUser?.email || SUPER_ADMIN_EMAIL
       });
     } catch (err: any) {
       console.error('Failed to decline role:', err);
@@ -117,7 +159,7 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
       isOpen={isOpen}
       onClose={onClose}
       title="Municipal Authority Access Approvals"
-      subtitle="Super Administrator Control Panel • Review and grant elevated staff permissions"
+      subtitle={`Super Administrator Control Panel (${SUPER_ADMIN_EMAIL}) • Review and grant verified staff permissions`}
       maxWidth="2xl"
     >
       <div className="space-y-4">
@@ -145,7 +187,7 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
             <Shield className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="font-semibold text-slate-700">No Authority Requests in Queue</p>
             <p className="text-[11px] text-slate-400 mt-1">
-              When citizens or field staff submit authorization requests, they will appear here for review.
+              When citizens or field staff submit authorization requests, they will appear here for your review.
             </p>
           </div>
         ) : (

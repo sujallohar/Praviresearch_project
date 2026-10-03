@@ -43,7 +43,7 @@ const bottomNavItems = [
 ];
 
 export const AppLayout: React.FC = () => {
-  const { logout, profile, role, isAuthenticatedStaff, isPublicCitizen } = useAuth();
+  const { logout, profile, role, isAuthenticatedStaff, isPublicCitizen, isSuperAdmin } = useAuth();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [aiScannerOpen, setAiScannerOpen] = useState(false);
@@ -234,25 +234,25 @@ export const AppLayout: React.FC = () => {
             )}
           </div>
 
-          {role === 'Admin' ? (
+          {isSuperAdmin ? (
             <button
               onClick={() => setRoleRequestsModalOpen(true)}
               className="w-full mt-2 py-1.5 px-2 text-[11px] font-semibold text-indigo-300 hover:text-white bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-700/50 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-              title="Review pending elevated authority requests"
+              title="Review pending elevated authority requests (Sujal Lohar)"
             >
               <UserCheck className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Authority Approvals</span>
+              <span>Authority Approvals Queue</span>
             </button>
-          ) : (
+          ) : isPublicCitizen ? (
             <button
               onClick={() => setRequestRoleModalOpen(true)}
               className="w-full mt-2 py-1.5 px-2 text-[11px] font-semibold text-blue-300 hover:text-white bg-blue-950/50 hover:bg-blue-900 border border-blue-700/40 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-              title="Submit a role authorization request to the Admin"
+              title="Submit a role authorization request to Sujal Lohar"
             >
               <Shield className="w-3.5 h-3.5 text-blue-400" />
-              <span>Request Authority Role</span>
+              <span>Request Staff Role</span>
             </button>
-          )}
+          ) : null}
         </div>
       </aside>
 
@@ -276,8 +276,13 @@ export const AppLayout: React.FC = () => {
 
           {/* Right: Role badges and actions */}
           <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 ml-2">
-            {/* Public Portal Pill — hidden on small screens */}
-            {isPublicCitizen ? (
+            {/* Public Portal Pill / Verified Authority / Super Admin Pill */}
+            {isSuperAdmin ? (
+              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-900 text-xs font-black shadow-2xs">
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                <span>Super Admin (Sujal Lohar)</span>
+              </div>
+            ) : isPublicCitizen ? (
               <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium">
                 <Eye className="w-3.5 h-3.5 text-slate-500" />
                 <span>Public Citizen Mode</span>
@@ -285,7 +290,7 @@ export const AppLayout: React.FC = () => {
             ) : (
               <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                <span>Verified Authority</span>
+                <span>Verified: {role}</span>
               </div>
             )}
 
@@ -336,17 +341,17 @@ export const AppLayout: React.FC = () => {
               <span className="hidden sm:inline">AI Scanner</span>
             </button>
 
-            {/* Super Admin Access Approvals Button */}
-            {role === 'Admin' ? (
+            {/* Super Admin Access Approvals Button (Only for sujallohar17@gmail.com) */}
+            {isSuperAdmin ? (
               <button
                 onClick={() => setRoleRequestsModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-colors"
-                title="Review authority access requests from citizens & staff"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-colors shadow-2xs"
+                title="Review authority access requests from citizens & staff (Sujal Lohar)"
               >
                 <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden lg:inline">Approvals</span>
+                <span className="hidden lg:inline">Approvals Queue</span>
               </button>
-            ) : (
+            ) : isPublicCitizen ? (
               <button
                 onClick={() => setRequestRoleModalOpen(true)}
                 className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-colors"
@@ -355,7 +360,7 @@ export const AppLayout: React.FC = () => {
                 <Shield className="w-3.5 h-3.5 text-blue-600" />
                 <span>Request Role</span>
               </button>
-            )}
+            ) : null}
 
             {/* Download/Install PWA button */}
             <button

@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import type { Inspection, Asset } from '../types';
 import { 
   ClipboardCheck, Plus, Search, Filter, Pencil, 
-  Trash2, Calendar, User, Download, Lock, 
+  Trash2, Calendar, User, Download, 
   Eye, Camera, FileDown, ShieldCheck, MapPin, Loader2 
 } from 'lucide-react';
 import { useAuth, type UserRole } from '../context/AuthContext';
@@ -16,7 +16,7 @@ import { generateInspectionCertificate } from '../utils/pdfGenerator';
 import { downloadCsv } from '../utils/fileDownloader';
 
 export const Inspections: React.FC = () => {
-  const { profile, role, isPublicCitizen, canLogInspection } = useAuth();
+  const { profile, isPublicCitizen, isSuperAdmin, canLogInspection } = useAuth();
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [assetsMap, setAssetsMap] = useState<Record<string, Asset>>({});
   const [loading, setLoading] = useState(true);
@@ -89,10 +89,10 @@ export const Inspections: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (role !== 'Admin') {
+    if (!isSuperAdmin) {
       setRbacActionTitle("Delete Inspection Audit");
       setRbacRequiredRoles(['Admin']);
-      setRbacExplanation("Deleting official engineering inspection records is restricted exclusively to System Administrators.");
+      setRbacExplanation("Deleting official engineering inspection records is restricted exclusively to Super Administrator (sujallohar17@gmail.com).");
       setRbacModalOpen(true);
       return;
     }
@@ -182,21 +182,25 @@ export const Inspections: React.FC = () => {
           >
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
-          <button
-            onClick={() => setIsAiScannerOpen(true)}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
-            title="Scan structural defects using Edge AI Camera"
-          >
-            <Camera className="w-3.5 h-3.5" /> AI Camera Scan
-          </button>
-          <button
-            onClick={handleOpenCreate}
-            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
-            title={canLogInspection ? "Log Inspection" : "Restricted: Field Engineer/Admin only"}
-          >
-            {canLogInspection ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
-            Log Inspection
-          </button>
+          {!isPublicCitizen && canLogInspection && (
+            <>
+              <button
+                onClick={() => setIsAiScannerOpen(true)}
+                className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+                title="Scan structural defects using Edge AI Camera"
+              >
+                <Camera className="w-3.5 h-3.5" /> AI Camera Scan
+              </button>
+              <button
+                onClick={handleOpenCreate}
+                className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
+                title="Log Inspection"
+              >
+                <Plus className="w-4 h-4" />
+                Log Inspection
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -334,21 +338,29 @@ export const Inspections: React.FC = () => {
                                 <FileDown className="w-4 h-4" />
                               )}
                             </button>
-                            <button
-                              onClick={() => handleOpenEdit(insp)}
-                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                              title="Edit inspection report"
-                            >
-                              <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(insp.id!)}
-                              disabled={actionLoadingId === insp.id}
-                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                              title="Delete inspection (Admin only)"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {!isPublicCitizen && (
+                              <>
+                                {canLogInspection && (
+                                  <button
+                                    onClick={() => handleOpenEdit(insp)}
+                                    className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                    title="Edit inspection report"
+                                  >
+                                    <Pencil className="w-4 h-4" />
+                                  </button>
+                                )}
+                                {isSuperAdmin && (
+                                  <button
+                                    onClick={() => handleDelete(insp.id!)}
+                                    disabled={actionLoadingId === insp.id}
+                                    className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                    title="Delete inspection (Super Admin only)"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -417,21 +429,29 @@ export const Inspections: React.FC = () => {
                           )}
                           <span>PDF</span>
                         </button>
-                        <button
-                          onClick={() => handleOpenEdit(insp)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Edit"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(insp.id!)}
-                          disabled={actionLoadingId === insp.id}
-                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {!isPublicCitizen && (
+                          <>
+                            {canLogInspection && (
+                              <button
+                                onClick={() => handleOpenEdit(insp)}
+                                className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                title="Edit"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                            )}
+                            {isSuperAdmin && (
+                              <button
+                                onClick={() => handleDelete(insp.id!)}
+                                disabled={actionLoadingId === insp.id}
+                                className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                title="Delete (Super Admin only)"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
