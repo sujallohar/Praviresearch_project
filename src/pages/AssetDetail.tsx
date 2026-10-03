@@ -13,9 +13,10 @@ import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { IssueModal } from '../components/modals/IssueModal';
 import { InspectionModal } from '../components/modals/InspectionModal';
 import { AssetQrTagModal } from '../components/assets/AssetQrTagModal';
+import { PredictiveLifecycleCard } from '../components/analytics/PredictiveLifecycleCard';
 import { formatTimestamp } from '../utils/dateUtils';
 
-const tabs = ['Overview', 'Lifecycle', 'Inspections', 'Issues', 'Maintenance', 'Project'];
+const tabs = ['Overview', 'Lifecycle', 'Predictive AI', 'Inspections', 'Issues', 'Maintenance', 'Project'];
 
 export const AssetDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -486,6 +487,19 @@ export const AssetDetail: React.FC = () => {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {activeTab === 'Predictive AI' && (
+            <div className="py-2">
+              <PredictiveLifecycleCard
+                asset={asset}
+                maintenanceRecords={maintenance}
+                inspections={inspections}
+                onScheduleMaintenance={(_assetId) => {
+                  setIsMaintModalOpen(true);
+                }}
+              />
             </div>
           )}
         </div>

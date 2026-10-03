@@ -2,17 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { 
   BarChart3, PieChart, 
   AlertTriangle, Wrench, Download, FileText, 
-  DollarSign, TrendingUp, Filter, RefreshCw
+  DollarSign, TrendingUp, Filter, RefreshCw, Sparkles, Clock, ArrowUpRight
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import type { Asset, Project, Issue, MaintenanceRecord } from '../types';
+import { Link } from 'react-router-dom';
 import { 
   PieChart as RePieChart, Pie, Cell, Tooltip as ReTooltip, ResponsiveContainer, 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
 } from 'recharts';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { calculatePortfolioPredictiveMetrics } from '../utils/predictiveEngine';
 
 const COLORS = ['#3b82f6', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -22,7 +24,7 @@ export const Reports: React.FC = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'visuals' | 'tables'>('visuals');
+  const [activeTab, setActiveTab] = useState<'visuals' | 'tables' | 'predictive'>('visuals');
   const [departmentFilter, setDepartmentFilter] = useState('All');
 
   const fetchData = async () => {
@@ -280,6 +282,15 @@ export const Reports: React.FC = () => {
             Visual Charts
           </button>
           <button
+            onClick={() => setActiveTab('predictive')}
+            className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1 ${
+              activeTab === 'predictive' ? 'bg-white text-indigo-700 shadow-sm font-bold' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Sparkles className="w-3 h-3 text-indigo-600" />
+            Predictive AI
+          </button>
+          <button
             onClick={() => setActiveTab('tables')}
             className={`px-3 py-1.5 rounded-md transition-colors ${
               activeTab === 'tables' ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-600 hover:text-slate-900'
@@ -475,6 +486,226 @@ export const Reports: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Tab 3: Predictive AI & Deterioration Forecast */}
+      {activeTab === 'predictive' && (() => {
+        const portfolioMetrics = calculatePortfolioPredictiveMetrics(filteredAssets, maintenance);
+        const { analyses, averageHealthScore, assetsAtRiskCount, totalPreventativeSavings, riskCategoryCounts } = portfolioMetrics;
+
+        // Group by Remaining Useful Life Horizon
+        const horizonBuckets = [
+          { name: '< 2 Yrs', count: analyses.filter(a => a.remainingUsefulLifeYears < 2).length, fill: '#ef4444' },
+          { name: '2 - 5 Yrs', count: analyses.filter(a => a.remainingUsefulLifeYears >= 2 && a.remainingUsefulLifeYears < 5).length, fill: '#f97316' },
+          { name: '5 - 10 Yrs', count: analyses.filter(a => a.remainingUsefulLifeYears >= 5 && a.remainingUsefulLifeYears < 10).length, fill: '#f59e0b' },
+          { name: '> 10 Yrs', count: analyses.filter(a => a.remainingUsefulLifeYears >= 10).length, fill: '#10b981' }
+        ];
+
+        // Risk breakdown
+        const riskChartData = [
+          { name: 'Low Risk', value: riskCategoryCounts.Low, fill: '#10b981' },
+          { name: 'Medium Risk', value: riskCategoryCounts.Medium, fill: '#f59e0b' },
+          { name: 'High Risk', value: riskCategoryCounts.High, fill: '#f97316' },
+          { name: 'Extreme Risk', value: riskCategoryCounts.Extreme, fill: '#ef4444' }
+        ].filter(r => r.value > 0);
+
+        return (
+          <div className="space-y-6">
+            {/* Predictive KPI Overview */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl shadow-sm border border-indigo-800">
+                <span className="text-[11px] font-bold text-indigo-300 uppercase tracking-wider block mb-1">
+                  Average Portfolio Health Index
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold">{averageHealthScore}</span>
+                  <span className="text-xs text-slate-400">/ 100</span>
+                  <span className="ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/30 text-indigo-200">
+                    Weibull Weighted
+                  </span>
+                </div>
+                <div className="w-full bg-white/20 rounded-full h-1.5 mt-3 overflow-hidden">
+                  <div className="bg-indigo-400 h-full rounded-full" style={{ width: `${averageHealthScore}%` }} />
+                </div>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                  At-Risk Infrastructure Assets
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-rose-600">{assetsAtRiskCount}</span>
+                  <span className="text-xs text-slate-500">of {filteredAssets.length} assets</span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Assets categorized in High or Extreme Probability/Consequence bracket
+                </p>
+              </div>
+
+              <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                  Taxpayer Savings via Proactive Cycle
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-extrabold text-emerald-600">
+                    +${(totalPreventativeSavings / 1000000).toFixed(2)}M
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Estimated capital saved vs emergency failure replacements
+                </p>
+              </div>
+            </div>
+
+            {/* Charts Row */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Horizon Bar Chart */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="mb-4">
+                  <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-indigo-600" />
+                    Remaining Useful Life (RUL) Horizon
+                  </h3>
+                  <p className="text-xs text-slate-500">Distribution of municipal assets by time-to-critical cutoff</p>
+                </div>
+                <div className="h-60 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={horizonBuckets}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                      <XAxis dataKey="name" fontSize={12} stroke="#64748b" />
+                      <YAxis allowDecimals={false} fontSize={12} stroke="#64748b" />
+                      <ReTooltip contentStyle={{ borderRadius: '0.5rem', fontSize: '12px' }} />
+                      <Bar dataKey="count" name="Assets" radius={[6, 6, 0, 0]}>
+                        {horizonBuckets.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* Risk Category Pie Chart */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div className="mb-4">
+                  <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600" />
+                    Failure Consequence Risk Distribution
+                  </h3>
+                  <p className="text-xs text-slate-500">5x5 Risk Matrix distribution across current portfolio</p>
+                </div>
+                <div className="h-60 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RePieChart>
+                      <Pie
+                        data={riskChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {riskChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <ReTooltip contentStyle={{ borderRadius: '0.5rem', fontSize: '12px' }} />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    </RePieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+            </div>
+
+            {/* At-Risk Infrastructure Watchlist Table */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                  <h3 className="font-bold text-base text-slate-900">
+                    Infrastructure Risk & Deterioration Watchlist
+                  </h3>
+                  <p className="text-xs text-slate-500">Assets sorted by shortest Remaining Useful Life (RUL)</p>
+                </div>
+                <span className="text-xs font-semibold px-2.5 py-1 bg-slate-100 rounded-lg text-slate-700">
+                  {analyses.length} Total Evaluated
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase bg-slate-50">
+                      <th className="py-3 px-4">Asset Details</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Health Index</th>
+                      <th className="py-3 px-4">Remaining Life</th>
+                      <th className="py-3 px-4">Critical Horizon</th>
+                      <th className="py-3 px-4">Risk Level</th>
+                      <th className="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {analyses
+                      .sort((a, b) => a.remainingUsefulLifeYears - b.remainingUsefulLifeYears)
+                      .slice(0, 15)
+                      .map(item => (
+                        <tr key={item.assetId} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-3 px-4">
+                            <Link 
+                              to={`/assets/${item.assetId}`}
+                              className="font-semibold text-slate-900 hover:text-blue-600 block truncate max-w-xs"
+                            >
+                              {item.assetName}
+                            </Link>
+                            <span className="font-mono text-[10px] text-slate-400">{item.assetId}</span>
+                          </td>
+                          <td className="py-3 px-4 text-slate-600 text-xs">{item.assetType}</td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-bold ${
+                              item.currentHealthScore >= 70 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                              item.currentHealthScore >= 40 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                              'bg-red-50 text-red-700 border border-red-200'
+                            }`}>
+                              {item.currentHealthScore} / 100
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-xs text-slate-800">
+                            {item.remainingUsefulLifeYears} Years
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-xs text-amber-700">
+                            {item.criticalFailureHorizon}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                              item.riskCategory === 'Extreme' ? 'bg-red-100 text-red-800' :
+                              item.riskCategory === 'High' ? 'bg-orange-100 text-orange-800' :
+                              item.riskCategory === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                              'bg-emerald-100 text-emerald-800'
+                            }`}>
+                              {item.riskCategory}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <Link
+                              to={`/assets/${item.assetId}`}
+                              className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800"
+                            >
+                              <span>View Forecast</span>
+                              <ArrowUpRight className="w-3.5 h-3.5" />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        );
+      })()}
     </div>
   );
 };
