@@ -56,7 +56,7 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
 
   if (!isOpen) return null;
 
-  // Strict Security Gate: Only Sujal Lohar (sujallohar17@gmail.com) can access
+  // Strict Security Gate: Only Sujal Lohar (emailsujallohar17@gmail.com) can access
   if (!isSuperAdmin) {
     return (
       <Modal
@@ -98,7 +98,7 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
     try {
       setActionLoadingId(req.id);
 
-      // Security enforcement: Nobody can ever be elevated to Admin except sujallohar17@gmail.com
+      // Security enforcement: Nobody can ever be elevated to Admin except emailsujallohar17@gmail.com
       const approvedRole: UserRole = req.requestedRole === 'Admin' ? 'Government Officer' : req.requestedRole;
 
       // 1. Update the request record in Cloud Firestore

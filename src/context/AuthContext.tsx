@@ -15,7 +15,7 @@ export interface UserProfile {
 }
 
 // Security Rule: Only this single verified email address is permitted to hold Super Admin privileges
-export const SUPER_ADMIN_EMAIL = 'sujallohar17@gmail.com';
+export const SUPER_ADMIN_EMAIL = 'emailsujallohar17@gmail.com';
 
 const CITIZEN_PROFILE: UserProfile = {
   uid: 'public-citizen',
@@ -90,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const docSnap = await getDoc(docRef);
 
         if (isSuperAdminEmail) {
-          // Hard-lock: sujallohar17@gmail.com is ALWAYS Super Admin
+          // Hard-lock: emailsujallohar17@gmail.com is ALWAYS Super Admin
           const adminProfile: UserProfile = {
             uid: user.uid,
             name: docSnap.exists() && docSnap.data().name ? docSnap.data().name : 'Sujal Lohar',

@@ -341,7 +341,7 @@ export const AppLayout: React.FC = () => {
               <span className="hidden sm:inline">AI Scanner</span>
             </button>
 
-            {/* Super Admin Access Approvals Button (Only for sujallohar17@gmail.com) */}
+            {/* Super Admin Access Approvals Button (Only for emailsujallohar17@gmail.com) */}
             {isSuperAdmin ? (
               <button
                 onClick={() => setRoleRequestsModalOpen(true)}

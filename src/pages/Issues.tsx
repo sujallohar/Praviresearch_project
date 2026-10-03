@@ -6,7 +6,7 @@ import {
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { Issue } from '../types';
-import { useAuth, type UserRole } from '../context/AuthContext';
+import { useAuth, type UserRole, SUPER_ADMIN_EMAIL } from '../context/AuthContext';
 import { IssueModal } from '../components/modals/IssueModal';
 import { RbacModal } from '../components/modals/RbacModal';
 import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanner';
@@ -69,7 +69,7 @@ export const Issues: React.FC = () => {
     if (!isSuperAdmin) {
       setRbacActionTitle("Delete Civic Issue Record");
       setRbacRequiredRoles(['Admin']);
-      setRbacExplanation("Deleting public issue and incident audit records is restricted strictly to Super Administrator (sujallohar17@gmail.com).");
+      setRbacExplanation(`Deleting public issue and incident audit records is restricted strictly to Super Administrator (${SUPER_ADMIN_EMAIL}).`);
       setRbacModalOpen(true);
       return;
     }

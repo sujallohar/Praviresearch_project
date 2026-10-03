@@ -4,7 +4,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Helper function: Strictly checks if caller is Super Admin Sujal Lohar
     function isSuperAdmin() {
-      return request.auth != null && request.auth.token.email != null && request.auth.token.email.lower() == 'sujallohar17@gmail.com';
+      return request.auth != null && request.auth.token.email != null && request.auth.token.email.lower() == 'emailsujallohar17@gmail.com';
     }
 
     // Helper function: Authenticated municipal staff
@@ -48,7 +48,7 @@ service cloud.firestore {
     }
 
     // Role Verification Requests:
-    // Anyone can submit a request; ONLY Sujal Lohar (sujallohar17@gmail.com) can read, approve, or delete!
+    // Anyone can submit a request; ONLY Sujal Lohar (emailsujallohar17@gmail.com) can read, approve, or delete!
     match /roleRequests/{requestId} {
       allow create: if true;
       allow read, update, delete: if isSuperAdmin();

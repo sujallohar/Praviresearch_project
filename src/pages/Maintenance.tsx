@@ -3,7 +3,7 @@ import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc } from '
 import { db } from '../lib/firebase';
 import type { MaintenanceRecord } from '../types';
 import { Wrench, Plus, Search, Filter, Pencil, Trash2, Calendar, DollarSign, CheckCircle2, Clock, Download, Eye } from 'lucide-react';
-import { useAuth, type UserRole } from '../context/AuthContext';
+import { useAuth, type UserRole, SUPER_ADMIN_EMAIL } from '../context/AuthContext';
 import { MaintenanceModal } from '../components/modals/MaintenanceModal';
 import { RbacModal } from '../components/modals/RbacModal';
 import { formatTimestamp } from '../utils/dateUtils';
@@ -97,7 +97,7 @@ export const Maintenance: React.FC = () => {
     if (!isSuperAdmin) {
       setRbacActionTitle("Delete Maintenance Record");
       setRbacRequiredRoles(['Admin']);
-      setRbacExplanation("Deleting historical maintenance records and work orders is restricted exclusively to Super Administrator (sujallohar17@gmail.com).");
+      setRbacExplanation(`Deleting historical maintenance records and work orders is restricted exclusively to Super Administrator (${SUPER_ADMIN_EMAIL}).`);
       setRbacModalOpen(true);
       return;
     }

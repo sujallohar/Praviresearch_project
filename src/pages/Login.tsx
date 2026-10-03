@@ -39,7 +39,7 @@ export const Login: React.FC = () => {
       const isSuperAdminEmail = cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase();
 
       if (isSignup) {
-        // Enforce: Only sujallohar17@gmail.com can ever hold the Admin role
+        // Enforce: Only emailsujallohar17@gmail.com can ever hold the Admin role
         const assignedRole: UserRole = isSuperAdminEmail ? 'Admin' : role;
 
         const { user } = await createUserWithEmailAndPassword(auth, cleanEmail, password);
@@ -179,7 +179,7 @@ export const Login: React.FC = () => {
                 <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[11px] text-slate-500 flex items-start gap-2">
                   <Shield className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
                   <p>
-                    <strong>Security Policy:</strong> Super Administrator access is strictly restricted to Central Head (<code className="text-blue-700 font-mono">sujallohar17@gmail.com</code>). All staff registrations are audited.
+                    <strong>Security Policy:</strong> Super Administrator access is strictly restricted to Central Head (<code className="text-blue-700 font-mono">emailsujallohar17@gmail.com</code>). All staff registrations are audited.
                   </p>
                 </div>
               </>

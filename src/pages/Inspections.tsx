@@ -7,7 +7,7 @@ import {
   Trash2, Calendar, User, Download, 
   Eye, Camera, FileDown, ShieldCheck, MapPin, Loader2 
 } from 'lucide-react';
-import { useAuth, type UserRole } from '../context/AuthContext';
+import { useAuth, type UserRole, SUPER_ADMIN_EMAIL } from '../context/AuthContext';
 import { InspectionModal } from '../components/modals/InspectionModal';
 import { RbacModal } from '../components/modals/RbacModal';
 import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanner';
@@ -92,7 +92,7 @@ export const Inspections: React.FC = () => {
     if (!isSuperAdmin) {
       setRbacActionTitle("Delete Inspection Audit");
       setRbacRequiredRoles(['Admin']);
-      setRbacExplanation("Deleting official engineering inspection records is restricted exclusively to Super Administrator (sujallohar17@gmail.com).");
+      setRbacExplanation(`Deleting official engineering inspection records is restricted exclusively to Super Administrator (${SUPER_ADMIN_EMAIL}).`);
       setRbacModalOpen(true);
       return;
     }
