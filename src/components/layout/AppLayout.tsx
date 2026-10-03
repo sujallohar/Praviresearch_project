@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { GlobalSearch } from '../GlobalSearch';
 import { NotificationPopover } from '../NotificationPopover';
 import { RoleSwitcher } from '../RoleSwitcher';
+import { NetworkStatusBanner } from '../common/NetworkStatusBanner';
 import { 
   LayoutDashboard, Building2, FolderKanban, 
   AlertTriangle, ClipboardCheck, Wrench, 
@@ -255,6 +256,9 @@ export const AppLayout: React.FC = () => {
           })}
         </div>
       </nav>
+
+      {/* Offline and Cloud Sync Banner */}
+      <NetworkStatusBanner />
     </div>
   );
 };

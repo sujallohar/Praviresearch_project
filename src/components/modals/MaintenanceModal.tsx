@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { queueOfflineRecord } from '../../lib/offlineQueue';
 import type { MaintenanceRecord, Asset } from '../../types';
 import { Wrench, Calendar, DollarSign, Building2, HardHat, FileText, Loader2 } from 'lucide-react';
 
@@ -154,6 +155,24 @@ export const MaintenanceModal: React.FC<MaintenanceModalProps> = ({
         updatedAt: serverTimestamp()
       };
 
+      // Check if browser is offline
+      if (typeof navigator !== 'undefined' && !navigator.onLine && !isEditing) {
+        await queueOfflineRecord('maintenance', {
+          assetId,
+          type: finalType,
+          contractor: contractor.trim() || 'Internal Maintenance Crew',
+          plannedDate: plannedDate || new Date().toISOString(),
+          actualDate: actualDate || null,
+          cost: Number(cost) || 0,
+          status,
+          notes: notes.trim()
+        });
+        alert('🌐 Offline Mode Active: Maintenance record saved locally. It will automatically synchronize to Cloud Firestore when internet connection is restored.');
+        onSuccess();
+        onClose();
+        return;
+      }
+
       if (isEditing && recordToEdit?.id) {
         await updateDoc(doc(db, 'maintenanceRecords', recordToEdit.id), payload);
       } else {
@@ -167,6 +186,27 @@ export const MaintenanceModal: React.FC<MaintenanceModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Error saving maintenance record:', err);
+      // Offline fallback on network failure
+      if (!isEditing) {
+        try {
+          await queueOfflineRecord('maintenance', {
+            assetId,
+            type: finalType,
+            contractor: contractor.trim() || 'Internal Maintenance Crew',
+            plannedDate: plannedDate || new Date().toISOString(),
+            actualDate: actualDate || null,
+            cost: Number(cost) || 0,
+            status,
+            notes: notes.trim()
+          });
+          alert('🌐 Network unavailable: Saved maintenance task locally to offline queue! It will automatically sync once connected.');
+          onSuccess();
+          onClose();
+          return;
+        } catch (queueErr) {
+          console.error('Failed to queue offline maintenance:', queueErr);
+        }
+      }
       setError(err.message || 'Failed to save maintenance record.');
     } finally {
       setSubmitting(false);

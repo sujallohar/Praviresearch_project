@@ -1,0 +1,55 @@
+{
+  "name": "GovAsset 360 — Municipal Infrastructure OS",
+  "short_name": "GovAsset 360",
+  "description": "Enterprise Municipal Infrastructure Management, Field Inspection, and Civic Hazard Tracking System",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8fafc",
+  "theme_color": "#1e3a8a",
+  "categories": ["business", "government", "utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Log Field Inspection",
+      "short_name": "Inspect",
+      "description": "Record on-site structural condition assessment",
+      "url": "/inspections",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Report Civic Hazard",
+      "short_name": "Report",
+      "description": "Log pothole, water leak, or public infrastructure hazard",
+      "url": "/issues",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Public Citizen Board",
+      "short_name": "Updates",
+      "description": "View live municipal infrastructure updates without login",
+      "url": "/updates",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

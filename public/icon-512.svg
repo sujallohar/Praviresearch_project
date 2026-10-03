@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="100" fill="#1e3a8a"/>
+  <!-- Ambient glow -->
+  <circle cx="256" cy="256" r="180" fill="#2563eb" opacity="0.35"/>
+  <!-- Shield emblem -->
+  <path d="M256 75 L384 128 V260 C384 345 256 415 256 415 C256 415 128 345 128 260 V128 Z" fill="#0f172a" stroke="#60a5fa" stroke-width="10" stroke-linejoin="round"/>
+  <!-- Infrastructure bridge / pillars inside shield -->
+  <path d="M180 310 L180 200 L218 200 L218 310" fill="#ffffff" opacity="0.95"/>
+  <path d="M294 310 L294 200 L332 200 L332 310" fill="#ffffff" opacity="0.95"/>
+  <!-- Suspension arch -->
+  <path d="M160 230 C202 205, 310 205, 352 230" fill="none" stroke="#38bdf8" stroke-width="10" stroke-linecap="round"/>
+  <!-- Foundation beam -->
+  <path d="M144 310 L368 310" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <!-- Golden Star of Excellence -->
+  <polygon points="256,135 264,159 288,159 269,175 274,199 256,183 238,199 243,175 224,159 248,159" fill="#fbbf24"/>
+  <!-- 360 Arc in emerald -->
+  <path d="M192 360 C214 378 298 378 320 360" fill="none" stroke="#34d399" stroke-width="9" stroke-linecap="round"/>
+</svg>

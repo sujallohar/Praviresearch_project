@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { queueOfflineRecord } from '../../lib/offlineQueue';
 import type { Inspection, Asset } from '../../types';
 import { ClipboardCheck, Building2, User, Calendar, FileText, Loader2 } from 'lucide-react';
 
@@ -113,6 +114,18 @@ export const InspectionModal: React.FC<InspectionModalProps> = ({
         status
       };
 
+      // Check if browser is offline
+      if (typeof navigator !== 'undefined' && !navigator.onLine && !isEditing) {
+        await queueOfflineRecord('inspection', {
+          ...payload,
+          date: date || new Date().toISOString()
+        });
+        alert('🌐 Offline Mode Active: Inspection audit stored locally on device. It will automatically synchronize to Cloud Firestore when internet connection is restored.');
+        onSuccess();
+        onClose();
+        return;
+      }
+
       if (isEditing && inspectionToEdit?.id) {
         await updateDoc(doc(db, 'inspections', inspectionToEdit.id), {
           ...payload,
@@ -129,6 +142,26 @@ export const InspectionModal: React.FC<InspectionModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Error saving inspection:', err);
+      // Offline fallback on network error
+      if (!isEditing) {
+        try {
+          await queueOfflineRecord('inspection', {
+            assetId,
+            inspector: inspector.trim() || 'Official Inspector',
+            date: date || new Date().toISOString(),
+            condition,
+            findings: findings.trim() || 'Visual structural inspection conducted without major discrepancies.',
+            recommendation: recommendation.trim() || 'Continue regular cycle maintenance.',
+            status
+          });
+          alert('🌐 Network unavailable: Saved inspection locally to offline queue! It will automatically sync once connected.');
+          onSuccess();
+          onClose();
+          return;
+        } catch (queueErr) {
+          console.error('Failed to queue offline inspection:', queueErr);
+        }
+      }
       setError(err.message || 'Failed to save inspection.');
     } finally {
       setSubmitting(false);

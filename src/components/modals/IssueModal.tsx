@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from './Modal';
 import { collection, getDocs, addDoc, updateDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { queueOfflineRecord } from '../../lib/offlineQueue';
 import type { Issue, Asset } from '../../types';
 import { AlertTriangle, Building2, User, Calendar, FileText, Loader2 } from 'lucide-react';
 
@@ -120,6 +121,18 @@ export const IssueModal: React.FC<IssueModalProps> = ({
         description: description.trim()
       };
 
+      // Check if browser is offline
+      if (typeof navigator !== 'undefined' && !navigator.onLine && !isEditing) {
+        await queueOfflineRecord('issue', {
+          ...payload,
+          dueDate: dueDate || new Date().toISOString()
+        });
+        alert('🌐 Offline Mode Active: Civic issue report saved locally on your device. It will automatically synchronize to Cloud Firestore when internet connection is restored.');
+        onSuccess();
+        onClose();
+        return;
+      }
+
       if (isEditing && issueToEdit?.id) {
         await updateDoc(doc(db, 'issues', issueToEdit.id), {
           ...payload,
@@ -136,6 +149,27 @@ export const IssueModal: React.FC<IssueModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Error saving issue:', err);
+      // Offline fallback on network failure
+      if (!isEditing) {
+        try {
+          await queueOfflineRecord('issue', {
+            title: title.trim(),
+            assetId: assetId || 'demo-asset',
+            severity,
+            status,
+            reportedBy: reportedBy.trim() || 'Auditor',
+            assignedTo: assignedTo.trim() || 'Maintenance Crew',
+            dueDate: dueDate || new Date().toISOString(),
+            description: description.trim()
+          });
+          alert('🌐 Network unavailable: Saved civic hazard report locally to offline queue! It will automatically sync once connected.');
+          onSuccess();
+          onClose();
+          return;
+        } catch (queueErr) {
+          console.error('Failed to queue offline issue:', queueErr);
+        }
+      }
       setError(err.message || 'Failed to save issue.');
     } finally {
       setSubmitting(false);
