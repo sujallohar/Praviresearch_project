@@ -218,38 +218,38 @@ export const Reports: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Reports & Analytical Insights</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            Aggregated institutional reporting, asset distribution, expenditure audit, and document export.
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Reports & Analytics</h1>
+          <p className="text-slate-500 text-xs sm:text-sm mt-1">
+            Asset distribution, expenditure audit, and document export.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex overflow-x-auto gap-2 scrollbar-hide -mx-1 px-1 pb-1">
           <button 
             onClick={fetchData} 
-            className="p-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            className="p-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors flex-shrink-0"
             title="Refresh analytics data"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
           <button 
             onClick={exportAssetsCSV} 
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
           >
             <FileText className="w-3.5 h-3.5" /> Assets CSV
           </button>
           <button 
             onClick={exportProjectsCSV} 
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg text-xs font-semibold hover:bg-slate-50 shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
           >
             <FileText className="w-3.5 h-3.5" /> Projects CSV
           </button>
           <button 
             onClick={exportPDF} 
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
           >
-            <Download className="w-4 h-4" /> Export Executive PDF
+            <Download className="w-4 h-4" /> Export PDF
           </button>
         </div>
       </div>

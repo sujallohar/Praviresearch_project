@@ -163,23 +163,23 @@ export const Maintenance: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Maintenance & Work Orders</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Maintenance & Work Orders</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Schedule, monitor, and execute routine preventative and corrective maintenance tasks.
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
           >
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
           <button
             onClick={handleOpenCreate}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
             title={canScheduleMaintenance ? "Schedule Maintenance" : "Restricted: Engineer/Officer only"}
           >
             {canScheduleMaintenance ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
@@ -281,91 +281,164 @@ export const Maintenance: React.FC = () => {
             </button>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-3 px-4">Planned Date</th>
-                  <th className="py-3 px-4">Maintenance Task</th>
-                  <th className="py-3 px-4">Target Asset</th>
-                  <th className="py-3 px-4">Contractor</th>
-                  <th className="py-3 px-4">Cost</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredRecords.map(record => {
-                  const dateStr = formatTimestamp(record.plannedDate, 'N/A');
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 bg-slate-50/75 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Planned Date</th>
+                    <th className="py-3 px-4">Maintenance Task</th>
+                    <th className="py-3 px-4">Target Asset</th>
+                    <th className="py-3 px-4">Contractor</th>
+                    <th className="py-3 px-4">Cost</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {filteredRecords.map(record => {
+                    const dateStr = formatTimestamp(record.plannedDate, 'N/A');
 
-                  return (
-                    <tr key={record.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap text-xs font-medium">
-                        <div className="flex items-center gap-1.5">
-                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          {dateStr}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 font-medium text-slate-900">
-                        {record.type}
-                        {record.notes && (
-                          <span className="block text-xs font-normal text-slate-500 truncate max-w-xs mt-0.5">
-                            {record.notes}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-500 font-mono text-xs">
-                        {record.assetId}
-                      </td>
-                      <td className="py-3.5 px-4 text-slate-600 text-xs">
-                        {record.contractor || 'Public Works Dept'}
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-slate-900 text-xs">
-                        ₹{(record.cost || 0).toLocaleString()}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                          record.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                          record.status === 'In Progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          'bg-amber-50 text-amber-700 border-amber-200'
-                        }`}>
-                          {record.status}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {record.status !== 'Completed' && (
-                            <button
-                              onClick={() => handleQuickStatusChange(record.id!, 'Completed')}
-                              disabled={actionLoadingId === record.id}
-                              className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition-colors"
-                            >
-                              Complete
-                            </button>
+                    return (
+                      <tr key={record.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap text-xs font-medium">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            {dateStr}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-medium text-slate-900">
+                          {record.type}
+                          {record.notes && (
+                            <span className="block text-xs font-normal text-slate-500 truncate max-w-xs mt-0.5">
+                              {record.notes}
+                            </span>
                           )}
-                          <button
-                            onClick={() => handleOpenEdit(record)}
-                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                            title="Edit maintenance record"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(record.id!)}
-                            disabled={actionLoadingId === record.id}
-                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                            title="Delete record (Admin only)"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-500 font-mono text-xs">
+                          {record.assetId}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-600 text-xs">
+                          {record.contractor || 'Public Works Dept'}
+                        </td>
+                        <td className="py-3.5 px-4 font-semibold text-slate-900 text-xs">
+                          ₹{(record.cost || 0).toLocaleString()}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                            record.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                            record.status === 'In Progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                            'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {record.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {record.status !== 'Completed' && (
+                              <button
+                                onClick={() => handleQuickStatusChange(record.id!, 'Completed')}
+                                disabled={actionLoadingId === record.id}
+                                className="text-xs font-semibold text-emerald-600 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition-colors"
+                              >
+                                Complete
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleOpenEdit(record)}
+                              className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                              title="Edit maintenance record"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(record.id!)}
+                              disabled={actionLoadingId === record.id}
+                              className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              title="Delete record (Admin only)"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredRecords.map(record => {
+                const dateStr = formatTimestamp(record.plannedDate, 'N/A');
+
+                return (
+                  <div key={record.id} className="p-3 sm:p-4 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-sm text-slate-900 truncate">
+                          {record.type}
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                        <div className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
+                          Asset: {record.assetId} • {record.contractor || 'Public Works'}
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                        record.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        record.status === 'In Progress' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                        'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        {record.status}
+                      </span>
+                    </div>
+
+                    {record.notes && (
+                      <p className="text-xs text-slate-600 line-clamp-2 mb-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        {record.notes}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-slate-900 text-xs">
+                          ₹{(record.cost || 0).toLocaleString()}
+                        </span>
+                        <span className="text-[11px] text-slate-400">• {dateStr}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {record.status !== 'Completed' && (
+                          <button
+                            onClick={() => handleQuickStatusChange(record.id!, 'Completed')}
+                            disabled={actionLoadingId === record.id}
+                            className="text-xs font-semibold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-2 py-1 rounded transition-colors"
+                          >
+                            Done
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleOpenEdit(record)}
+                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(record.id!)}
+                          disabled={actionLoadingId === record.id}
+                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 

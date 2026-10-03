@@ -149,23 +149,23 @@ export const Projects: React.FC = () => {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Project Lifecycle & Execution</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Project Lifecycle & Execution</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Track capital projects, expenditure disbursement, contractor performance, and milestone completion.
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
           >
             <Download className="w-3.5 h-3.5" /> Export CSV
           </button>
           <button 
             onClick={handleOpenCreate} 
-            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold shadow-sm transition-all"
+            className="flex-1 sm:flex-none justify-center flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs sm:text-sm font-semibold shadow-sm transition-all"
             title={canCreateProject ? "Create New Capital Project" : "Restricted: Officer/Admin only"}
           >
             {canCreateProject ? <Plus className="w-4 h-4" /> : <Lock className="w-4 h-4 opacity-80" />}
@@ -258,80 +258,145 @@ export const Projects: React.FC = () => {
             No projects found matching the criteria.
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/75 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-3 px-4">Project</th>
-                  <th className="py-3 px-4">Associated Asset</th>
-                  <th className="py-3 px-4">Stage / Status</th>
-                  <th className="py-3 px-4">Progress</th>
-                  <th className="py-3 px-4">Budget & Spent</th>
-                  <th className="py-3 px-4">Contractor</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
-                {filteredProjects.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-slate-900">
-                      {p.name}
-                      <span className="block text-xs font-normal text-slate-500">{p.departmentId}</span>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-mono text-xs">
-                      {p.assetId}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        p.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
-                        p.status === 'Construction' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                        'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
-                        {p.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
-                          <div 
-                            className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
-                            style={{ width: `${p.progressPercent}%` }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium text-slate-700">{p.progressPercent}%</span>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 text-xs">
-                      <div><strong className="text-slate-900">Budget:</strong> ₹{(p.budget || 0).toLocaleString()}</div>
-                      <div><strong className="text-slate-900">Spent:</strong> ₹{(p.spent || 0).toLocaleString()}</div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600">
-                      {p.contractor || 'TBD'}
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(p)}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                          title="Edit project details and progress"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(p.id!)}
-                          disabled={actionLoadingId === p.id}
-                          className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete project (Admin only)"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/75 text-xs font-semibold text-slate-500 uppercase tracking-wider border-b border-slate-200">
+                    <th className="py-3 px-4">Project</th>
+                    <th className="py-3 px-4">Associated Asset</th>
+                    <th className="py-3 px-4">Stage / Status</th>
+                    <th className="py-3 px-4">Progress</th>
+                    <th className="py-3 px-4">Budget & Spent</th>
+                    <th className="py-3 px-4">Contractor</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {filteredProjects.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3.5 px-4 font-semibold text-slate-900">
+                        {p.name}
+                        <span className="block text-xs font-normal text-slate-500">{p.departmentId}</span>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600 font-mono text-xs">
+                        {p.assetId}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          p.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                          p.status === 'Construction' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                          'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                            <div 
+                              className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                              style={{ width: `${p.progressPercent}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-medium text-slate-700">{p.progressPercent}%</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600 text-xs">
+                        <div><strong className="text-slate-900">Budget:</strong> ₹{(p.budget || 0).toLocaleString()}</div>
+                        <div><strong className="text-slate-900">Spent:</strong> ₹{(p.spent || 0).toLocaleString()}</div>
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-600">
+                        {p.contractor || 'TBD'}
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleOpenEdit(p)}
+                            className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            title="Edit project details and progress"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id!)}
+                            disabled={actionLoadingId === p.id}
+                            className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Delete project (Admin only)"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card List */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {filteredProjects.map(p => (
+                <div key={p.id} className="p-3 sm:p-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm text-slate-900 truncate">
+                        {p.name}
+                      </div>
+                      <div className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
+                        Asset: {p.assetId} • {p.departmentId}
+                      </div>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${
+                      p.status === 'Completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      p.status === 'Construction' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                      'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}>
+                      {p.status}
+                    </span>
+                  </div>
+
+                  {/* Progress bar */}
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 mb-1">
+                      <span>Progress</span>
+                      <span className="font-semibold text-slate-700">{p.progressPercent}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                      <div 
+                        className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" 
+                        style={{ width: `${p.progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                    <div className="text-[11px] text-slate-500">
+                      <span>Spent: <strong>₹{(p.spent || 0).toLocaleString()}</strong> / ₹{(p.budget || 0).toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenEdit(p)}
+                        className="p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                        title="Edit"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(p.id!)}
+                        disabled={actionLoadingId === p.id}
+                        className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

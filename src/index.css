@@ -26,6 +26,9 @@
     --border: #e2e8f0; /* slate-200 */
     --input: #e2e8f0;
     --ring: #94a3b8; /* slate-400 */
+
+    /* Safe area insets for notched phones */
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
@@ -33,5 +36,47 @@
   body {
     @apply bg-[var(--background)] text-[var(--foreground)] antialiased min-h-screen;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent pull-to-refresh on mobile */
+    overscroll-behavior-y: contain;
+  }
+
+  /* Ensure inputs are at least 16px to prevent iOS zoom */
+  input, select, textarea {
+    font-size: max(16px, 1em);
+  }
+
+  @media (min-width: 640px) {
+    input, select, textarea {
+      font-size: inherit;
+    }
   }
 }
+
+/* Scrollbar hide utility for horizontal scroll areas on mobile */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Leaflet map touch improvements */
+.leaflet-container {
+  touch-action: pan-x pan-y;
+}
+
+/* Improve tap target sizes on mobile */
+@media (max-width: 640px) {
+  .leaflet-control-zoom a {
+    width: 36px !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    font-size: 18px !important;
+  }
+}
+

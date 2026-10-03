@@ -250,32 +250,32 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6">
       {/* Public Citizen & Transparency Welcome Banner */}
       {isPublicCitizen ? (
-        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 rounded-2xl p-6 text-white shadow-md relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/30 border border-blue-400/40 text-blue-200 text-xs font-semibold mb-2.5">
-                <Eye className="w-3.5 h-3.5" />
-                Public Transparency Portal • Open Access (No Login Required)
+        <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-slate-900 rounded-xl sm:rounded-2xl p-4 sm:p-6 text-white shadow-md relative overflow-hidden">
+          <div className="relative z-10 flex flex-col gap-3 sm:gap-4">
+            <div>
+              <div className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full bg-blue-500/30 border border-blue-400/40 text-blue-200 text-[10px] sm:text-xs font-semibold mb-2">
+                <Eye className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                Public Portal • Open Access
               </div>
-              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
-                Live Public Infrastructure Transparency Portal
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-extrabold tracking-tight leading-tight">
+                Live Infrastructure Transparency Portal
               </h2>
-              <p className="text-xs sm:text-sm text-blue-100 mt-1 leading-relaxed">
-                Welcome, Citizen! You have unrestricted live access to regional infrastructure condition maps, active road projects, and municipal maintenance updates. Anyone can report road hazards or water leaks directly.
+              <p className="text-[11px] sm:text-xs lg:text-sm text-blue-100 mt-1 leading-relaxed">
+                Unrestricted live access to infrastructure maps, road projects, and maintenance updates. Report hazards directly.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 flex-shrink-0">
+            <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2">
               <button
                 onClick={() => setIsIssueModalOpen(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 bg-white text-blue-900 hover:bg-blue-50 font-bold text-xs rounded-xl shadow-sm transition-all"
+                className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 sm:py-2 bg-white text-blue-900 hover:bg-blue-50 font-bold text-xs rounded-xl shadow-sm transition-all"
               >
                 <AlertTriangle className="w-4 h-4 text-red-600" />
                 Report a Civic Issue
               </button>
               <Link
                 to="/updates"
-                className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600/70 hover:bg-blue-600 text-white font-semibold text-xs rounded-xl border border-blue-400/30 transition-all"
+                className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 sm:py-2 bg-blue-600/70 hover:bg-blue-600 text-white font-semibold text-xs rounded-xl border border-blue-400/30 transition-all"
               >
                 <Megaphone className="w-4 h-4 text-blue-200" />
                 Citizen Updates Feed
@@ -283,13 +283,13 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-blue-600/40 flex flex-wrap items-center justify-between gap-2 text-xs text-blue-200">
-            <span>Are you a certified municipal officer or field inspector?</span>
+          <div className="mt-3 sm:mt-4 pt-3 border-t border-blue-600/40 flex flex-wrap items-center justify-between gap-2 text-[11px] sm:text-xs text-blue-200">
+            <span>Certified officer or inspector?</span>
             <Link 
               to="/login"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-blue-900 hover:bg-blue-50 font-bold text-xs rounded-lg transition-colors shadow-xs"
             >
-              Staff Login Portal →
+              Staff Login →
             </Link>
           </div>
         </div>
@@ -321,17 +321,17 @@ export const Dashboard: React.FC = () => {
       )}
 
       {/* Top Header & Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Overview Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-0.5">
-            Real-time public asset governance, geographic spatial mapping, and lifecycle KPIs.
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Overview Dashboard</h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+            Real-time asset governance, spatial mapping, and lifecycle KPIs.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex overflow-x-auto gap-2 pb-1 -mx-1 px-1 scrollbar-hide">
           <button 
             onClick={handleTriggerRegisterAsset}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all whitespace-nowrap flex-shrink-0"
             title={canCreateAsset ? "Register a new asset" : "Restricted: Officer/Admin only"}
           >
             {canCreateAsset ? <Plus className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5 opacity-80" />}
@@ -339,7 +339,7 @@ export const Dashboard: React.FC = () => {
           </button>
           <button 
             onClick={handleTriggerScheduleWork}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
             title={canScheduleMaintenance ? "Schedule maintenance" : "Restricted: Engineer/Officer only"}
           >
             {canScheduleMaintenance ? <Wrench className="w-3.5 h-3.5 text-blue-600" /> : <Lock className="w-3.5 h-3.5 text-slate-400" />}
@@ -347,7 +347,7 @@ export const Dashboard: React.FC = () => {
           </button>
           <button 
             onClick={() => setIsIssueModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
             title="Open to everyone (Citizens & Staff)"
           >
             <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
@@ -355,7 +355,7 @@ export const Dashboard: React.FC = () => {
           </button>
           <button 
             onClick={handleTriggerNewProject}
-            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
             title={canCreateProject ? "New capital project" : "Restricted: Officer/Admin only"}
           >
             {canCreateProject ? <FolderKanban className="w-3.5 h-3.5 text-indigo-600" /> : <Lock className="w-3.5 h-3.5 text-slate-400" />}
@@ -364,7 +364,7 @@ export const Dashboard: React.FC = () => {
           <button 
             onClick={handleSeed} 
             disabled={seeding}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 whitespace-nowrap flex-shrink-0"
             title="Reset to fresh demo dataset"
           >
             <Database className="w-3.5 h-3.5 text-slate-500" /> 
@@ -441,28 +441,37 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Main Grid: Interactive Map + Status Side Panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left 2 Cols: GIS Spatial Map */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-[520px]">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
-            <div>
-              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-blue-600" />
-                Regional GIS Asset & Spatial Monitor
-              </h2>
-              <p className="text-xs text-slate-500">
-                Displaying {mappedAssets.length} mapped assets with real-time condition color coding.
-              </p>
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-3 sm:p-4 flex flex-col h-[320px] sm:h-[420px] lg:h-[520px]">
+          <div className="flex flex-col gap-2 mb-2 sm:mb-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <h2 className="text-sm sm:text-base font-bold text-slate-900 flex items-center gap-1.5 sm:gap-2">
+                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+                  <span className="truncate">GIS Asset Monitor</span>
+                </h2>
+                <p className="text-[10px] sm:text-xs text-slate-500">
+                  {mappedAssets.length} mapped assets with condition color coding.
+                </p>
+              </div>
+              <button
+                onClick={() => { setFocusedAsset(null); setFitTrigger(prev => prev + 1); }}
+                className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors flex-shrink-0"
+                title="Fit all markers in view"
+              >
+                <ZoomIn className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Map Filters & Controls */}
-            <div className="flex items-center gap-2">
-              <div className="flex bg-slate-100 p-0.5 rounded-lg text-xs font-semibold">
+            {/* Map Filters — horizontally scrollable on mobile */}
+            <div className="flex overflow-x-auto gap-1 scrollbar-hide -mx-1 px-1">
+              <div className="flex bg-slate-100 p-0.5 rounded-lg text-[11px] sm:text-xs font-semibold flex-shrink-0">
                 {(['All', 'High Risk', 'Operational', 'Under Maintenance'] as const).map(tab => (
                   <button
                     key={tab}
                     onClick={() => { setMapFilter(tab); setFocusedAsset(null); }}
-                    className={`px-2.5 py-1 rounded-md transition-all ${
+                    className={`px-2 sm:px-2.5 py-1 rounded-md transition-all whitespace-nowrap ${
                       mapFilter === tab 
                         ? 'bg-white text-slate-900 shadow-xs' 
                         : 'text-slate-500 hover:text-slate-800'
@@ -472,14 +481,6 @@ export const Dashboard: React.FC = () => {
                   </button>
                 ))}
               </div>
-
-              <button
-                onClick={() => { setFocusedAsset(null); setFitTrigger(prev => prev + 1); }}
-                className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg border border-slate-200 transition-colors"
-                title="Fit all markers in view"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
             </div>
           </div>
 
@@ -552,27 +553,27 @@ export const Dashboard: React.FC = () => {
           </div>
 
           {/* Map Legend */}
-          <div className="mt-2.5 flex flex-wrap items-center justify-between text-[11px] text-slate-500 pt-1">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-                Good Condition
+          <div className="mt-2 sm:mt-2.5 flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-500 pt-1">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <span className="flex items-center gap-1 sm:gap-1.5 font-medium">
+                <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                Good
               </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
-                Fair / Servicing Due
+              <span className="flex items-center gap-1 sm:gap-1.5 font-medium">
+                <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                Fair
               </span>
-              <span className="flex items-center gap-1.5 font-medium">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block"></span>
-                High Risk / Critical
+              <span className="flex items-center gap-1 sm:gap-1.5 font-medium">
+                <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-500 inline-block"></span>
+                Critical
               </span>
             </div>
-            <span>Click any marker to inspect asset lifecycle or issue work order</span>
+            <span className="hidden sm:inline">Click any marker to inspect asset lifecycle</span>
           </div>
         </div>
 
         {/* Right 1 Col: High Risk Watchlist & Recent Hazards */}
-        <div className="flex flex-col gap-4 h-[520px]">
+        <div className="flex flex-col gap-4 h-auto lg:h-[520px]">
           {/* Critical Risk Attention List */}
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 flex-1 overflow-hidden flex flex-col">
             <div className="p-3.5 border-b border-slate-200 bg-slate-50/75 flex justify-between items-center">
@@ -671,7 +672,7 @@ export const Dashboard: React.FC = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Recent Maintenance Completed */}
           <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200">
             <div className="flex items-center justify-between text-xs font-bold text-slate-800 mb-2">
