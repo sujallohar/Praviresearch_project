@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import QRCode from 'qrcode';
 import { QrCode, Download, Printer, Copy, Check, X, Shield, MapPin, Building2 } from 'lucide-react';
 import type { Asset } from '../../types';
+import { downloadDataUrl } from '../../utils/fileDownloader';
 
 interface AssetQrTagModalProps {
   isOpen: boolean;
@@ -14,14 +15,18 @@ export const AssetQrTagModal: React.FC<AssetQrTagModalProps> = ({ isOpen, onClos
   const [copied, setCopied] = useState<boolean>(false);
   const badgeRef = useRef<HTMLDivElement | null>(null);
 
-  const verificationUrl = asset ? `https://govasset-360.web.app/assets/${asset.id}` : '';
+  const appOrigin = typeof window !== 'undefined' && window.location.origin
+    ? window.location.origin
+    : 'https://govasset-360.web.app';
+  const verificationUrl = asset ? `${appOrigin}/assets/${asset.id}` : '';
 
   useEffect(() => {
     if (asset && isOpen) {
+      // Universal HTTPS URL: scannable by any mobile phone camera, Google Lens, or GovAsset in-app scanner
       QRCode.toDataURL(
-        `govasset360://asset/${asset.id}?url=${encodeURIComponent(verificationUrl)}`,
+        verificationUrl,
         {
-          width: 300,
+          width: 320,
           margin: 1,
           color: {
             dark: '#0f172a',
@@ -44,10 +49,7 @@ export const AssetQrTagModal: React.FC<AssetQrTagModalProps> = ({ isOpen, onClos
 
   const handleDownloadPng = () => {
     if (!qrDataUrl) return;
-    const link = document.createElement('a');
-    link.download = `GovAsset_QR_Tag_${asset.id}.png`;
-    link.href = qrDataUrl;
-    link.click();
+    downloadDataUrl(qrDataUrl, `GovAsset_QR_Tag_${asset.id}.png`);
   };
 
   const handlePrint = () => {

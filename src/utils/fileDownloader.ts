@@ -30,7 +30,7 @@ export function downloadBlob(blob: Blob, filename: string): void {
 }
 
 /**
- * Generates and downloads a CSV file with UTF-8 BOM so Microsoft Excel and Numbers
+ * Downloads a CSV file with UTF-8 BOM so Microsoft Excel and Numbers
  * display all accents, currency symbols, and commas correctly.
  */
 export function downloadCsv(csvContent: string, filename: string): void {
@@ -38,4 +38,27 @@ export function downloadCsv(csvContent: string, filename: string): void {
   const bom = '\uFEFF';
   const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
   downloadBlob(blob, filename);
+}
+
+/**
+ * Downloads a Data URL (base64 PNG/JPEG) reliably across Safari, Mac Chrome, and mobile browsers
+ */
+export function downloadDataUrl(dataUrl: string, filename: string): void {
+  const link = document.createElement('a');
+  link.style.display = 'none';
+  link.href = dataUrl;
+  link.setAttribute('download', filename);
+
+  document.body.appendChild(link);
+  link.click();
+
+  setTimeout(() => {
+    try {
+      if (document.body.contains(link)) {
+        document.body.removeChild(link);
+      }
+    } catch {
+      // Ignore cleanup error
+    }
+  }, 300);
 }
