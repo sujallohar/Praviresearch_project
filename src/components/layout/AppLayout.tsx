@@ -94,6 +94,26 @@ export const AppLayout: React.FC = () => {
     };
   }, [sidebarOpen]);
 
+  // Standalone PWA & mobile safe area status bar handling
+  useEffect(() => {
+    const updateSafeArea = () => {
+      const isStandalone = 
+        window.matchMedia('(display-mode: standalone)').matches ||
+        (window.navigator as any).standalone === true ||
+        document.referrer.includes('android-app://');
+
+      if (isStandalone && window.innerWidth < 768) {
+        document.documentElement.style.setProperty(
+          '--safe-area-top',
+          'max(env(safe-area-inset-top, 0px), 32px)'
+        );
+      }
+    };
+    updateSafeArea();
+    window.addEventListener('resize', updateSafeArea);
+    return () => window.removeEventListener('resize', updateSafeArea);
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       {/* Mobile Overlay Backdrop */}
@@ -113,7 +133,12 @@ export const AppLayout: React.FC = () => {
         lg:translate-x-0
       `}>
         {/* Sidebar Header */}
-        <div className="p-4 flex items-center justify-between border-b border-slate-800">
+        <div 
+          className="p-4 flex items-center justify-between border-b border-slate-800"
+          style={{
+            paddingTop: 'calc(var(--safe-area-top, 0px) + 1rem)'
+          }}
+        >
           <div className="flex items-center gap-3">
             <div className="bg-blue-600 p-2 rounded-lg shadow-sm">
               <Building2 className="w-6 h-6 text-white" />
@@ -200,7 +225,12 @@ export const AppLayout: React.FC = () => {
         </div>
 
         {/* Sidebar Footer User & Role Controls */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/60">
+        <div 
+          className="p-4 border-t border-slate-800 bg-slate-900/60"
+          style={{
+            paddingBottom: 'calc(var(--safe-area-bottom, 0px) + 1rem)'
+          }}
+        >
           <div className="flex items-center gap-3 mb-3">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold text-sm ${
               isAuthenticatedStaff ? 'bg-blue-600' : 'bg-slate-700'
@@ -257,123 +287,135 @@ export const AppLayout: React.FC = () => {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 lg:ml-64 overflow-auto bg-slate-50 min-h-screen flex flex-col pb-16 lg:pb-0">
+      <main 
+        className="flex-1 lg:ml-64 overflow-auto bg-slate-50 min-h-screen flex flex-col lg:!pb-0"
+        style={{
+          paddingBottom: 'calc(4.5rem + var(--safe-area-bottom, 0px))'
+        }}
+      >
         {/* Sticky Header with Hamburger, Search, Role Badge, and Notifications */}
-        <header className="bg-white border-b border-slate-200 h-14 lg:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6 xl:px-8 sticky top-0 z-20 shadow-sm">
-          {/* Left: Hamburger (mobile) + Search */}
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-1 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors flex-shrink-0"
-              aria-label="Open navigation menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex-1 max-w-md lg:max-w-xl min-w-0">
-              <GlobalSearch />
-            </div>
-          </div>
-
-          {/* Right: Role badges and actions */}
-          <div className="flex items-center gap-2 sm:gap-3 lg:gap-4 flex-shrink-0 ml-2">
-            {/* Public Portal Pill / Verified Authority / Super Admin Pill */}
-            {isSuperAdmin ? (
-              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-900 text-xs font-black shadow-2xs">
-                <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
-                <span>Super Admin (Sujal Lohar)</span>
+        <header 
+          className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-xs transition-[padding] duration-150"
+          style={{
+            paddingTop: 'var(--safe-area-top, 0px)'
+          }}
+        >
+          <div className="h-14 lg:h-16 flex items-center justify-between px-2.5 sm:px-4 lg:px-6 xl:px-8">
+            {/* Left: Hamburger (mobile) + Search */}
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 mr-2">
+              <button
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors flex-shrink-0 touch-manipulation"
+                aria-label="Open navigation menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <div className="flex-1 max-w-md lg:max-w-xl min-w-0">
+                <GlobalSearch onScanQr={() => setQrScannerOpen(true)} />
               </div>
-            ) : isPublicCitizen ? (
-              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium">
-                <Eye className="w-3.5 h-3.5 text-slate-500" />
-                <span>Public Citizen Mode</span>
-              </div>
-            ) : (
-              <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
-                <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                <span>Verified: {role}</span>
-              </div>
-            )}
-
-            {/* Role Badge (Read-Only Security Indicator) — hidden on very small */}
-            <div className="hidden sm:block">
-              <RoleSwitcher />
             </div>
 
-            {/* Quick Staff Sign In / Sign Out Button — hidden on mobile (already in sidebar) */}
-            <div className="hidden md:block">
-              {isAuthenticatedStaff ? (
-                <button
-                  onClick={logout}
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-red-700 bg-slate-100 hover:bg-red-50 border border-slate-200 rounded-lg transition-colors"
-                  title="Sign out of staff mode"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Sign Out</span>
-                </button>
+            {/* Right: Role badges and actions */}
+            <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 flex-shrink-0">
+              {/* Public Portal Pill / Verified Authority / Super Admin Pill */}
+              {isSuperAdmin ? (
+                <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 border border-purple-200 text-purple-900 text-xs font-black shadow-2xs">
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Super Admin (Sujal Lohar)</span>
+                </div>
+              ) : isPublicCitizen ? (
+                <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200 text-slate-600 text-xs font-medium">
+                  <Eye className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Public Citizen Mode</span>
+                </div>
               ) : (
-                <Link
-                  to="/login"
-                  className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
-                >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>Staff Sign In</span>
-                </Link>
+                <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-bold">
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Verified: {role}</span>
+                </div>
               )}
+
+              {/* Role Badge (Read-Only Security Indicator) — hidden on small screens */}
+              <div className="hidden sm:block">
+                <RoleSwitcher />
+              </div>
+
+              {/* Quick Staff Sign In / Sign Out Button — hidden on mobile (already in sidebar) */}
+              <div className="hidden md:block">
+                {isAuthenticatedStaff ? (
+                  <button
+                    onClick={logout}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-600 hover:text-red-700 bg-slate-100 hover:bg-red-50 border border-slate-200 rounded-lg transition-colors"
+                    title="Sign out of staff mode"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </button>
+                ) : (
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-xs transition-colors"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Staff Sign In</span>
+                  </Link>
+                )}
+              </div>
+
+              {/* Scan Asset QR Code Button — hidden on mobile (integrated inside search bar & sidebar) */}
+              <button
+                onClick={() => setQrScannerOpen(true)}
+                className="hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+                title="Scan Physical Asset QR Tag"
+              >
+                <QrCode className="w-3.5 h-3.5 text-amber-300" />
+                <span>Scan QR</span>
+              </button>
+
+              {/* Quick AI Scanner Header Button — hidden on mobile (accessible via bottom nav 'AI' tab & sidebar) */}
+              <button
+                onClick={() => setAiScannerOpen(true)}
+                className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold shadow-sm transition-all"
+                title="Open Edge AI Structural Defect Scanner"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>AI Scanner</span>
+              </button>
+
+              {/* Super Admin Access Approvals Button (Only for emailsujallohar17@gmail.com) */}
+              {isSuperAdmin ? (
+                <button
+                  onClick={() => setRoleRequestsModalOpen(true)}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-colors shadow-2xs"
+                  title="Review authority access requests from citizens & staff (Sujal Lohar)"
+                >
+                  <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="hidden lg:inline">Approvals Queue</span>
+                </button>
+              ) : isPublicCitizen ? (
+                <button
+                  onClick={() => setRequestRoleModalOpen(true)}
+                  className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-colors"
+                  title="Request elevated authority from Head of Department"
+                >
+                  <Shield className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Request Role</span>
+                </button>
+              ) : null}
+
+              {/* Download/Install PWA button — hidden on mobile (available in sidebar & install prompt) */}
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('govasset:open-install'))}
+                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition-colors shadow-2xs"
+                title="Download & Install GovAsset 360 App on Mobile or Desktop ($0 Free)"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="hidden xl:inline">Install App</span>
+              </button>
+
+              {/* Notifications Popover */}
+              <NotificationPopover onOpenRoleRequests={() => setRoleRequestsModalOpen(true)} />
             </div>
-
-            {/* Scan Asset QR Code Button */}
-            <button
-              onClick={() => setQrScannerOpen(true)}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
-              title="Scan Physical Asset QR Tag"
-            >
-              <QrCode className="w-3.5 h-3.5 text-amber-300" />
-              <span className="hidden md:inline">Scan QR</span>
-            </button>
-
-            {/* Quick AI Scanner Header Button */}
-            <button
-              onClick={() => setAiScannerOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold shadow-sm transition-all animate-pulse"
-              title="Open Edge AI Structural Defect Scanner"
-            >
-              <Camera className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">AI Scanner</span>
-            </button>
-
-            {/* Super Admin Access Approvals Button (Only for emailsujallohar17@gmail.com) */}
-            {isSuperAdmin ? (
-              <button
-                onClick={() => setRoleRequestsModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-lg text-xs font-bold transition-colors shadow-2xs"
-                title="Review authority access requests from citizens & staff (Sujal Lohar)"
-              >
-                <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden lg:inline">Approvals Queue</span>
-              </button>
-            ) : isPublicCitizen ? (
-              <button
-                onClick={() => setRequestRoleModalOpen(true)}
-                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 rounded-lg text-xs font-semibold transition-colors"
-                title="Request elevated authority from Head of Department"
-              >
-                <Shield className="w-3.5 h-3.5 text-blue-600" />
-                <span>Request Role</span>
-              </button>
-            ) : null}
-
-            {/* Download/Install PWA button */}
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('govasset:open-install'))}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition-colors shadow-2xs"
-              title="Download & Install GovAsset 360 App on Mobile or Desktop ($0 Free)"
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-600" />
-              <span className="hidden xl:inline">Install App</span>
-            </button>
-
-            {/* Notifications Popover */}
-            <NotificationPopover onOpenRoleRequests={() => setRoleRequestsModalOpen(true)} />
           </div>
         </header>
 
@@ -384,7 +426,12 @@ export const AppLayout: React.FC = () => {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-white border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]">
+      <nav 
+        className="fixed bottom-0 left-0 right-0 z-30 lg:hidden bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-2px_10px_rgba(0,0,0,0.06)]"
+        style={{
+          paddingBottom: 'var(--safe-area-bottom, 0px)'
+        }}
+      >
         <div className="flex items-center justify-around h-14">
           {bottomNavItems.map((item) => {
             const isActive = location.pathname === item.path || 

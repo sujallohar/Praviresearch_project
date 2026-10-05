@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, QrCode } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, query, getDocs, limit } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +13,11 @@ type SearchResult = {
   path: string;
 };
 
-export const GlobalSearch: React.FC = () => {
+interface GlobalSearchProps {
+  onScanQr?: () => void;
+}
+
+export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onScanQr }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -86,13 +90,13 @@ export const GlobalSearch: React.FC = () => {
   return (
     <div ref={wrapperRef} className="relative w-full max-w-md">
       <div className="relative">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search className="h-5 w-5 text-slate-400" />
+        <div className="absolute inset-y-0 left-0 pl-2.5 sm:pl-3 flex items-center pointer-events-none">
+          <Search className="h-4 sm:h-5 w-4 sm:w-5 text-slate-400" />
         </div>
         <input
           type="text"
-          className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
-          placeholder="Search assets, projects, issues..."
+          className="block w-full pl-8 sm:pl-10 pr-8 sm:pr-4 py-1.5 sm:py-2 border border-slate-200 rounded-lg leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-xs sm:text-sm transition-colors"
+          placeholder="Search assets, projects..."
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
@@ -101,9 +105,23 @@ export const GlobalSearch: React.FC = () => {
           onFocus={() => setIsOpen(true)}
         />
         {loading && (
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+          <div className="absolute inset-y-0 right-0 pr-2.5 sm:pr-3 flex items-center pointer-events-none">
             <Loader2 className="h-4 w-4 text-slate-400 animate-spin" />
           </div>
+        )}
+        {!loading && onScanQr && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onScanQr();
+            }}
+            className="absolute inset-y-0 right-0 pr-2 sm:pr-2.5 flex items-center text-slate-400 hover:text-blue-600 transition-colors p-1"
+            title="Scan Physical Asset QR Tag"
+            aria-label="Scan Asset QR Code"
+          >
+            <QrCode className="h-4 w-4 text-slate-500 hover:text-blue-600" />
+          </button>
         )}
       </div>
 

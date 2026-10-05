@@ -27,8 +27,24 @@
     --input: #e2e8f0;
     --ring: #94a3b8; /* slate-400 */
 
-    /* Safe area insets for notched phones */
+    /* Safe area insets for notched phones & edge-to-edge system bars */
+    --safe-area-top: env(safe-area-inset-top, 0px);
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-left: env(safe-area-inset-left, 0px);
+    --safe-area-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+/* Standalone PWA mode on mobile devices: guarantee clearance for Android & iOS hardware status bars / camera cutouts */
+@media all and (display-mode: standalone) and (max-width: 768px) {
+  :root {
+    --safe-area-top: max(env(safe-area-inset-top, 0px), 32px);
+  }
+}
+
+@media all and (display-mode: fullscreen) and (max-width: 768px) {
+  :root {
+    --safe-area-top: max(env(safe-area-inset-top, 0px), 32px);
   }
 }
 
