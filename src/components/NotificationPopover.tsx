@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Bell, AlertTriangle, Wrench, Building2, Check, 
-  ExternalLink, UserCheck, Trash2 
+  ExternalLink, UserCheck, Trash2, X 
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -35,6 +35,16 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpen
     }
   });
 
+  // Persistent set of dismissed/cleared notifications (Trash button fix)
+  const [clearedIds, setClearedIds] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('govasset_cleared_notifs');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -48,6 +58,16 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpen
     }
   };
 
+  // Save cleared notification IDs to localStorage
+  const persistClearedIds = (newSet: Set<string>) => {
+    setClearedIds(newSet);
+    try {
+      localStorage.setItem('govasset_cleared_notifs', JSON.stringify(Array.from(newSet)));
+    } catch {
+      // Ignore
+    }
+  };
+
   useEffect(() => {
     let issueNotifs: AppNotification[] = [];
     let maintNotifs: AppNotification[] = [];
@@ -55,7 +75,10 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpen
     let assetNotifs: AppNotification[] = [];
 
     const updateAll = () => {
-      setNotifications([...roleNotifs, ...issueNotifs, ...assetNotifs, ...maintNotifs]);
+      const all = [...roleNotifs, ...issueNotifs, ...assetNotifs, ...maintNotifs];
+      // Exclude any notifications permanently cleared by the user
+      const filtered = all.filter((n) => !clearedIds.has(n.id));
+      setNotifications(filtered);
     };
 
     // 1. Issues
@@ -184,7 +207,18 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpen
 
   const clearAllNotifications = () => {
     markAllAsRead();
+    const newCleared = new Set(clearedIds);
+    notifications.forEach((n) => newCleared.add(n.id));
+    persistClearedIds(newCleared);
     setNotifications([]);
+  };
+
+  const handleDismissSingle = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const newCleared = new Set(clearedIds);
+    newCleared.add(id);
+    persistClearedIds(newCleared);
+    setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
   const handleNotificationClick = (notif: AppNotification) => {
@@ -303,9 +337,20 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({ onOpen
                       <p className="text-xs font-bold text-slate-900 truncate">
                         {notif.title}
                       </p>
-                      {notif.unread && (
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-600 shrink-0" />
-                      )}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {notif.unread && (
+                          <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => handleDismissSingle(e, notif.id)}
+                          className="p-0.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                          title="Dismiss this alert"
+                          aria-label="Dismiss this alert"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-2">
                       {notif.description}

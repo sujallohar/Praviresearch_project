@@ -27,15 +27,15 @@ export const About: React.FC = () => {
     <div className="max-w-6xl mx-auto space-y-8 pb-12 animate-in fade-in duration-300">
       
       {/* 1. Developer & Project Hero Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 text-white p-6 sm:p-8 lg:p-10 shadow-2xl border border-slate-800">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-blue-950 text-white p-4 sm:p-7 lg:p-10 shadow-2xl border border-slate-800">
         {/* Background glow effects */}
         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-6 sm:gap-8 justify-between">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-5 w-full md:w-auto">
             {/* App Icon / Shield Emblem */}
-            <div className="relative group">
+            <div className="relative group shrink-0">
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-amber-400/50 shadow-xl bg-slate-950 p-0.5">
                 <img 
                   src="/icon-192.png" 
@@ -52,7 +52,7 @@ export const About: React.FC = () => {
             </div>
 
             <div>
-              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1.5">
                 <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">
                   GovAsset 360
                 </h1>
@@ -60,19 +60,19 @@ export const About: React.FC = () => {
                   Municipal Infrastructure OS
                 </span>
               </div>
-              <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
                 A modern, human-centric municipal infrastructure governance operating system. Engineered for real-time asset tracking, AI defect vision, transparent public auditing, and zero-cost cloud reliability.
               </p>
               
-              <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-slate-400">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 mt-3 text-xs text-slate-400">
                 <span className="flex items-center gap-1.5">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" /> 100% Free Architecture
                 </span>
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <span className="flex items-center gap-1.5">
                   <Smartphone className="w-4 h-4 text-blue-400" /> PWA Mobile Native
                 </span>
-                <span>•</span>
+                <span className="hidden sm:inline">•</span>
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-amber-300" /> Edge AI Vision
                 </span>
@@ -81,10 +81,10 @@ export const About: React.FC = () => {
           </div>
 
           {/* Direct Install PWA Action */}
-          <div className="flex flex-col sm:flex-row md:flex-col gap-2.5 w-full md:w-auto shrink-0">
+          <div className="flex flex-col gap-2 w-full md:w-auto shrink-0 mt-2 md:mt-0">
             <button
               onClick={handleOpenInstall}
-              className="py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto py-2.5 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs sm:text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4" />
               <span>Install Mobile Web App</span>
@@ -97,12 +97,12 @@ export const About: React.FC = () => {
       </div>
 
       {/* 2. Developer Profile Section */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-sm border border-slate-200">
         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-blue-600 mb-3">
           <Award className="w-4 h-4" /> Creator & Systems Architect
         </div>
 
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 sm:gap-6">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2.5">
               <h2 className="text-xl sm:text-2xl font-black text-slate-900">
@@ -112,19 +112,19 @@ export const About: React.FC = () => {
                 Lead Full-Stack & AI Systems Engineer
               </span>
             </div>
-            <p className="text-sm text-slate-600 max-w-2xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
               Passionate about designing and deploying scalable, mission-critical civic systems, intelligent automated workflows, and high-performance web applications that empower both municipal authorities and everyday citizens.
             </p>
           </div>
 
           {/* Social & Connect Action Buttons */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 shrink-0 w-full lg:w-auto">
             {/* LinkedIn */}
             <a
               href="https://www.linkedin.com/in/sujallohar"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#0077b5] hover:bg-[#006097] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all hover:shadow-md"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#0077b5] hover:bg-[#006097] text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all hover:shadow-md w-full sm:w-auto"
             >
               <LinkedinIcon className="w-4 h-4" />
               <span>Connect on LinkedIn</span>
@@ -136,7 +136,7 @@ export const About: React.FC = () => {
               href="https://github.com/sujallohar"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all hover:shadow-md"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs sm:text-sm font-bold shadow-sm transition-all hover:shadow-md w-full sm:w-auto"
             >
               <GithubIcon className="w-4 h-4" />
               <span>GitHub Profile</span>
@@ -146,16 +146,16 @@ export const About: React.FC = () => {
         </div>
 
         {/* Project GitHub Repository Highlight */}
-        <div className="mt-6 p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="mt-5 sm:mt-6 p-3.5 sm:p-4 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 bg-slate-900 text-white rounded-xl shrink-0">
               <Code2 className="w-5 h-5 text-amber-300" />
             </div>
-            <div>
-              <span className="text-xs font-bold text-slate-900 block">
+            <div className="min-w-0 flex-1">
+              <span className="text-xs font-bold text-slate-900 block truncate">
                 Official Project Repository (Open Source)
               </span>
-              <span className="text-xs text-slate-500 font-mono">
+              <span className="text-xs text-slate-500 font-mono break-all">
                 github.com/sujallohar/Praviresearch_project
               </span>
             </div>
@@ -165,7 +165,7 @@ export const About: React.FC = () => {
             href="https://github.com/sujallohar/Praviresearch_project"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-lg text-xs font-bold shadow-2xs transition-colors shrink-0"
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 sm:py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 rounded-xl sm:rounded-lg text-xs font-bold shadow-2xs transition-colors w-full sm:w-auto shrink-0"
           >
             <GithubIcon className="w-3.5 h-3.5" />
             <span>View Source Code</span>
@@ -296,7 +296,7 @@ export const About: React.FC = () => {
           Engineered using industry-leading modern web standards and high-reliability frameworks.
         </p>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
           {[
             { name: 'React 19 & TypeScript', desc: 'Type-Safe Frontend Core', color: 'bg-blue-50 text-blue-700 border-blue-200' },
             { name: 'Vite 8 & Tailwind CSS', desc: 'Ultra-Fast Build Engine', color: 'bg-cyan-50 text-cyan-700 border-cyan-200' },

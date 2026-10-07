@@ -6,9 +6,11 @@ import {
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
-import type { Asset, Project, Issue, MaintenanceRecord } from '../types';
+import type { Asset, Project, Issue, MaintenanceRecord, CitizenFeedback } from '../types';
 import { IssueModal } from '../components/modals/IssueModal';
 import { StructuralDefectScanner } from '../components/ai/StructuralDefectScanner';
+import { ProjectFeedbackModal } from '../components/modals/ProjectFeedbackModal';
+import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { formatTimestamp } from '../utils/dateUtils';
 import { calculatePortfolioPredictiveMetrics } from '../utils/predictiveEngine';
@@ -27,10 +29,12 @@ interface UpdateItem {
 }
 
 export const PublicUpdates: React.FC = () => {
+  const { currentUser } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
+  const [feedbackList, setFeedbackList] = useState<CitizenFeedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDept, setSelectedDept] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Completed' | 'Active'>('All');
@@ -38,7 +42,13 @@ export const PublicUpdates: React.FC = () => {
   const [isAiScannerOpen, setIsAiScannerOpen] = useState(false);
   const [prefilledIssue, setPrefilledIssue] = useState<any>(null);
 
-  // Citizen interactive ratings state (stored locally in localStorage for $0 persistence)
+  // Dedicated Citizen Review & Feedback Modal state
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [selectedItemForFeedback, setSelectedItemForFeedback] = useState<any>(null);
+  const [selectedExistingFeedback, setSelectedExistingFeedback] = useState<CitizenFeedback | null>(null);
+  const [selectedInitialRating, setSelectedInitialRating] = useState<number>(4);
+
+  // Citizen interactive ratings state fallback from localStorage
   const [ratings, setRatings] = useState<Record<string, number>>(() => {
     try {
       const saved = localStorage.getItem('govasset_citizen_ratings');
@@ -49,6 +59,17 @@ export const PublicUpdates: React.FC = () => {
   });
 
   const [ratedFeedbackMessage, setRatedFeedbackMessage] = useState<string | null>(null);
+
+  // Persistent guest identifier for non-logged-in citizens
+  const getGuestIdentifier = () => {
+    if (currentUser?.uid) return currentUser.uid;
+    let guestId = localStorage.getItem('govasset_citizen_guest_id');
+    if (!guestId) {
+      guestId = 'guest_' + Math.random().toString(36).substring(2, 10);
+      localStorage.setItem('govasset_citizen_guest_id', guestId);
+    }
+    return guestId;
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -65,25 +86,39 @@ export const PublicUpdates: React.FC = () => {
     const unsubMaint = onSnapshot(collection(db, 'maintenanceRecords'), snap => {
       setMaintenance(snap.docs.map(d => ({ id: d.id, ...d.data() } as MaintenanceRecord)));
     });
+    const unsubFeedback = onSnapshot(collection(db, 'citizenFeedback'), snap => {
+      setFeedbackList(snap.docs.map(d => ({ id: d.id, ...d.data() } as CitizenFeedback)));
+    });
 
     return () => {
       unsubAssets();
       unsubProjects();
       unsubIssues();
       unsubMaint();
+      unsubFeedback();
     };
   }, []);
 
-  const handleRateWork = (itemId: string, stars: number) => {
-    const updated = { ...ratings, [itemId]: stars };
-    setRatings(updated);
-    try {
-      localStorage.setItem('govasset_citizen_ratings', JSON.stringify(updated));
-    } catch {
-      // Ignore
-    }
-    setRatedFeedbackMessage(`Thank you! Your ${stars}-star rating was registered on the Municipal Public Board.`);
-    setTimeout(() => setRatedFeedbackMessage(null), 3500);
+  const handleOpenFeedback = (item: UpdateItem, star?: number) => {
+    const guestId = getGuestIdentifier();
+    const existing = feedbackList.find(f => 
+      f.itemId === item.id && (
+        (currentUser?.uid && f.userId === currentUser.uid) ||
+        (currentUser?.email && f.userEmail?.toLowerCase() === currentUser.email.toLowerCase()) ||
+        f.userId === guestId
+      )
+    );
+
+    setSelectedItemForFeedback({
+      id: item.id,
+      title: item.title,
+      type: item.type,
+      department: item.department,
+      location: item.location
+    });
+    setSelectedExistingFeedback(existing || null);
+    setSelectedInitialRating(star || existing?.rating || ratings[item.id] || 4);
+    setFeedbackModalOpen(true);
   };
 
   // Build public updates feed from live data
@@ -302,7 +337,19 @@ export const PublicUpdates: React.FC = () => {
           </div>
         ) : (
           filteredFeed.map(item => {
-            const currentRating = ratings[item.id] || 0;
+            const guestId = getGuestIdentifier();
+            const itemFeedbacks = feedbackList.filter(f => f.itemId === item.id);
+            const userFeedback = itemFeedbacks.find(f => 
+              (currentUser?.uid && f.userId === currentUser.uid) ||
+              (currentUser?.email && f.userEmail?.toLowerCase() === currentUser.email.toLowerCase()) ||
+              f.userId === guestId
+            );
+
+            const averageRating = itemFeedbacks.length > 0
+              ? (itemFeedbacks.reduce((sum, f) => sum + f.rating, 0) / itemFeedbacks.length)
+              : (ratings[item.id] || 4.0);
+
+            const displayRating = userFeedback ? userFeedback.rating : averageRating;
 
             return (
               <div 
@@ -347,43 +394,80 @@ export const PublicUpdates: React.FC = () => {
                 </div>
 
                 {/* Citizen Rating & Action Column */}
-                <div className="flex flex-col items-start sm:items-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto">
-                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                    Citizen Community Rating
-                  </span>
+                <div className="flex flex-col items-start sm:items-end gap-1.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 w-full sm:w-auto">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
+                      Citizen Community Rating
+                    </span>
+                    {itemFeedbacks.length > 0 && (
+                      <span className="text-[9px] font-bold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                        {itemFeedbacks.length} review{itemFeedbacks.length > 1 ? 's' : ''}
+                      </span>
+                    )}
+                  </div>
+
                   <div className="flex items-center gap-1">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
                         key={star}
                         type="button"
-                        onClick={() => handleRateWork(item.id, star)}
+                        onClick={() => handleOpenFeedback(item, star)}
                         className={`p-1 transition-transform hover:scale-125 ${
-                          star <= currentRating ? 'text-amber-400' : 'text-slate-200 hover:text-amber-300'
+                          star <= Math.round(displayRating) ? 'text-amber-400' : 'text-slate-200 hover:text-amber-300'
                         }`}
-                        title={`Rate ${star} Stars`}
+                        title={`Rate ${star} Stars & Submit Review`}
                       >
                         <Star className="w-4 h-4 fill-current" />
                       </button>
                     ))}
-                    {currentRating > 0 && (
-                      <span className="text-xs font-bold text-slate-700 ml-1">
-                        {currentRating}.0
-                      </span>
-                    )}
+                    <span className="text-xs font-bold text-slate-700 ml-1">
+                      {displayRating.toFixed(1)}
+                    </span>
                   </div>
 
-                  <button
-                    onClick={() => setIsIssueModalOpen(true)}
-                    className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors mt-1"
-                  >
-                    Report Feedback
-                  </button>
+                  {userFeedback ? (
+                    <div className="flex flex-col items-start sm:items-end gap-1 mt-0.5">
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>Your Rating: {userFeedback.rating}★ (Saved in DB)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenFeedback(item)}
+                        className="px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors mt-0.5"
+                      >
+                        View / Update My Review
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenFeedback(item)}
+                      className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors mt-1"
+                    >
+                      Rate & Report Feedback
+                    </button>
+                  )}
                 </div>
               </div>
             );
           })
         )}
       </div>
+
+      {/* Dedicated Citizen Project Feedback & Review Modal */}
+      <ProjectFeedbackModal
+        isOpen={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
+        item={selectedItemForFeedback}
+        initialRating={selectedInitialRating}
+        existingFeedback={selectedExistingFeedback}
+        onSuccess={(saved) => {
+          setRatings(prev => ({ ...prev, [saved.itemId]: saved.rating }));
+          setRatedFeedbackMessage(`Your ${saved.rating}-star review was saved to the Municipal Database!`);
+          setTimeout(() => setRatedFeedbackMessage(null), 4000);
+        }}
+      />
 
       {/* Citizen Issue Report Modal */}
       <IssueModal

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { askAssistant } from '../lib/gemini';
 import { Sparkles, Send, User, Bot, Shield, Trash2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -55,15 +55,38 @@ export const Assistant: React.FC = () => {
     ];
   };
 
-  const [messages, setMessages] = useState<Message[]>([{
-    id: '1',
-    role: 'assistant',
-    content: `Hello **${profile?.name || 'Officer'}**! I am your GovAsset Intelligence Assistant. I am grounded directly in your live Firestore database and synchronized with your **${role || 'Government Officer'}** security credentials.
+  const chatStorageKey = `govasset_chat_history_${currentUser?.uid || 'guest'}_${role || 'Viewer'}`;
 
-How can I assist your operations today?`
-  }]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    try {
+      const saved = localStorage.getItem(chatStorageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse saved chat history:', e);
+    }
+    return [{
+      id: '1',
+      role: 'assistant',
+      content: `Hello **${profile?.name || 'Officer'}**! I am your GovAsset Intelligence Assistant. I am grounded directly in your live Firestore database and synchronized with your **${role || 'Government Officer'}** security credentials.\n\nHow can I assist your operations today?`
+    }];
+  });
+
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Persist messages across page switches, app minimizations (e.g. WhatsApp), and reloads
+  useEffect(() => {
+    try {
+      localStorage.setItem(chatStorageKey, JSON.stringify(messages));
+    } catch (e) {
+      console.warn('Failed to save chat history to localStorage:', e);
+    }
+  }, [messages, chatStorageKey]);
 
   const handleSend = async (question: string) => {
     if (!question.trim()) return;
@@ -99,11 +122,17 @@ How can I assist your operations today?`
   };
 
   const handleClear = () => {
-    setMessages([{
+    const refreshed: Message = {
       id: Date.now().toString(),
       role: 'assistant',
       content: `Conversation refreshed. Ready to assist you, **${profile?.name || 'User'}** (${role || 'Government Officer'}).`
-    }]);
+    };
+    setMessages([refreshed]);
+    try {
+      localStorage.setItem(chatStorageKey, JSON.stringify([refreshed]));
+    } catch {
+      // Ignore
+    }
   };
 
   const suggestions = getSuggestedQuestions();

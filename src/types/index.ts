@@ -81,3 +81,19 @@ export interface AuditLog {
   timestamp: any;
   details: string;
 }
+
+export interface CitizenFeedback {
+  id?: string;
+  itemId: string;
+  itemType: 'Project' | 'Maintenance' | 'Issue';
+  itemTitle: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  rating: number; // 1 to 5
+  comment: string;
+  category: string;
+  createdAt: any;
+  updatedAt: any;
+}
+

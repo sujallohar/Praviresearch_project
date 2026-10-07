@@ -10,6 +10,8 @@ import { auth, db } from '../lib/firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
+import { isValidEmail } from '../utils/validation';
+
 export const Login: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
@@ -31,11 +33,31 @@ export const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Strict RFC 5322 & Domain Validation (Rejects fake / numeric-only domains like sujalll@34234.com)
+    const emailValidation = isValidEmail(cleanEmail);
+    if (!emailValidation.valid) {
+      setError(emailValidation.reason || 'Please enter a valid, authenticated email address.');
+      return;
+    }
+
+    if (isSignup) {
+      if (!name.trim()) {
+        setError('Please enter your full name for staff authorization.');
+        return;
+      }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters long.');
+        return;
+      }
+    }
+
+    setLoading(true);
+
     try {
-      const cleanEmail = email.trim().toLowerCase();
       const isSuperAdminEmail = cleanEmail === SUPER_ADMIN_EMAIL.toLowerCase();
 
       if (isSignup) {
