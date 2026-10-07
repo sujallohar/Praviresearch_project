@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { formatTimestamp } from '../utils/dateUtils';
 import { calculatePortfolioPredictiveMetrics } from '../utils/predictiveEngine';
+import { ScrollToTopButton } from '../components/common/ScrollToTopButton';
 
 interface UpdateItem {
   id: string;
@@ -354,9 +355,9 @@ export const PublicUpdates: React.FC = () => {
             return (
               <div 
                 key={item.id} 
-                className="bg-white p-5 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-xs transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-xs transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-4 overflow-hidden min-w-0"
               >
-                <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="space-y-1.5 flex-1 min-w-0 w-full">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${item.badgeColor}`}>
                       {item.status}
@@ -372,22 +373,22 @@ export const PublicUpdates: React.FC = () => {
                     )}
                   </div>
 
-                  <h3 className="text-base font-bold text-slate-900 truncate">
+                  <h3 className="text-base font-bold text-slate-900 break-words">
                     {item.title}
                   </h3>
 
-                  <p className="text-sm text-slate-600 leading-relaxed">
+                  <p className="text-sm text-slate-600 leading-relaxed break-words">
                     {item.summary}
                   </p>
 
-                  <div className="flex flex-wrap items-center gap-4 pt-1 text-xs text-slate-500">
+                  <div className="flex flex-wrap items-center gap-3 pt-1 text-xs text-slate-500 min-w-0">
                     {item.location && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 shrink-0">
                         <MapPin className="w-3.5 h-3.5 text-blue-500" />
                         {item.location}
                       </span>
                     )}
-                    <span className="font-medium text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                    <span className="font-medium text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-200 break-words max-w-full">
                       {item.impact}
                     </span>
                   </div>
@@ -492,6 +493,9 @@ export const PublicUpdates: React.FC = () => {
           setIsIssueModalOpen(true);
         }}
       />
+
+      {/* Floating Back to Top Button */}
+      <ScrollToTopButton />
     </div>
   );
 };

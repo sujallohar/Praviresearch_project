@@ -288,7 +288,7 @@ export const AppLayout: React.FC = () => {
 
       {/* Main Content Area */}
       <main 
-        className="flex-1 lg:ml-64 overflow-auto bg-slate-50 min-h-screen flex flex-col lg:!pb-0"
+        className="flex-1 lg:ml-64 overflow-y-auto overflow-x-hidden min-w-0 max-w-full bg-slate-50 min-h-screen flex flex-col lg:!pb-0"
         style={{
           paddingBottom: 'calc(4.5rem + var(--safe-area-bottom, 0px))'
         }}
@@ -420,7 +420,7 @@ export const AppLayout: React.FC = () => {
         </header>
 
         {/* Page Content */}
-        <div className="p-3 sm:p-4 lg:p-6 xl:p-8 flex-1">
+        <div className="p-3 sm:p-4 lg:p-6 xl:p-8 flex-1 min-w-0 max-w-full">
           <Outlet />
         </div>
       </main>

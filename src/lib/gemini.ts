@@ -124,11 +124,154 @@ const buildSystemContext = (data: GroundedDataset, user?: UserContext): string =
 
 // Smart reasoning engine: generates role-aware, data-grounded responses
 const generateSmartLocalResponse = (prompt: string, data: GroundedDataset, user?: UserContext): string => {
-  const query = prompt.toLowerCase();
+  const query = prompt.toLowerCase().trim();
   const userName = user?.name || 'Officer';
   const userRole = user?.role || 'Government Officer';
 
-  // 1. User-specific / "my" data queries
+  // 1. Greetings & Conversational check (English & Hindi / Hinglish)
+  if (
+    query === 'hi' || query === 'hello' || query === 'hey' || query === 'namaste' ||
+    query.startsWith('hi ') || query.startsWith('hello ') || query.startsWith('hey ') ||
+    query.includes('kaise ho') || query.includes('kya hal') || query.includes('kya haal') ||
+    query.includes('good morning') || query.includes('good afternoon') || query.includes('good evening')
+  ) {
+    let greeting = `👋 **Hello ${userName}!** Welcome to the **GovAsset 360 Institutional Intelligence Engine**.\n\n`;
+    greeting += `I am synchronized with your credentials as **${userRole}** (${user?.department || 'Public Works'}). Here is how I can assist you right now:\n\n`;
+
+    if (userRole === 'Admin' || userRole === 'Government Officer') {
+      greeting += `• 📊 **System Audit:** Ask *"Full system audit"* or *"Show budget utilization"*\n`;
+      greeting += `• 🚨 **Risk Priorities:** Ask *"Which assets require attention?"* or *"Critical hazards"*\n`;
+      greeting += `• 📁 **My Records:** Ask *"What are my assigned tasks?"* to see your supervised assets\n`;
+    } else if (userRole === 'Field Engineer') {
+      greeting += `• 🔍 **Safety Inspections:** Ask *"Which assets require urgent inspection?"*\n`;
+      greeting += `• ⚠️ **Reported Discrepancies:** Ask *"Show critical issues in my zone"*\n`;
+      greeting += `• 📋 **My Logs:** Ask *"What are my logged inspections?"*\n`;
+    } else if (userRole === 'Contractor') {
+      greeting += `• 🛠️ **Work Orders:** Ask *"What are my scheduled maintenance tasks?"*\n`;
+      greeting += `• 💰 **Project Milestones:** Ask *"Show repair costs and deadlines"*\n`;
+    } else {
+      greeting += `• 🏙️ **Public Infrastructure:** Ask *"Overview of city infrastructure"* or *"Show road projects"*\n`;
+      greeting += `• 📢 **Report Civic Hazard:** Ask *"How do I report a pothole or issue?"*\n`;
+      greeting += `• ⭐ **Citizen Ratings:** Ask *"How can I rate a municipal project?"*\n`;
+    }
+    return greeting;
+  }
+
+  // 2. Questions about Developer, Architect, or Super Admin (Sujal Lohar)
+  if (
+    query.includes('sujal') || 
+    query.includes('who created') || 
+    query.includes('who made') || 
+    query.includes('developer') || 
+    query.includes('architect') || 
+    query.includes('super admin') ||
+    query.includes('creator')
+  ) {
+    return `### 👨‍💻 System Architect & Super Admin Information
+
+**GovAsset 360** was architected and developed by **Sujal Lohar** (Full-Stack Engineer & AI Infrastructure Architect).
+
+- 🛡️ **Super Admin Authority:** \`emailsujallohar17@gmail.com\`
+- 🌐 **LinkedIn Profile:** [linkedin.com/in/sujallohar](https://www.linkedin.com/in/sujallohar)
+- 💻 **GitHub Profile:** [github.com/sujallohar](https://github.com/sujallohar)
+- 🏛️ **Role-Based Approvals:** Only Sujal holds master administrative privileges to grant elevated staff and departmental roles.
+
+You can learn more about the technical stack and system vision on the **About Architect** page from the navigation bar.`;
+  }
+
+  // 3. How-to & Guidance inquiries (How to report, how to rate, how to scan QR, etc.)
+  if (
+    query.includes('how to report') || 
+    query.includes('report issue') || 
+    query.includes('issue kaise') || 
+    query.includes('complaint') ||
+    query.includes('how to rate') ||
+    query.includes('how to review') ||
+    query.includes('feedback kaise') ||
+    query.includes('how to scan') ||
+    query.includes('qr scan') ||
+    query.includes('how to use') ||
+    query.includes('kya kar sakte') ||
+    query.includes('help') ||
+    query.includes('madad')
+  ) {
+    let guide = `### 💡 Quick Guide & Operations Manual for ${userRole}\n\n`;
+    guide += `Here are the step-by-step instructions for key actions:\n\n`;
+
+    guide += `1. **Reporting Civic Hazards / Defects:**\n`;
+    guide += `   - Go to the **Issues** tab or **Public Updates** page.\n`;
+    guide += `   - Click **"Report a Civic Issue"** or tap **"AI Camera Defect Triage"** to upload/take a photo of a pothole, crack, or leak for automatic AI severity classification.\n\n`;
+
+    guide += `2. **Submitting Citizen Ratings & Reviews:**\n`;
+    guide += `   - Go to **Public Updates** from the menu.\n`;
+    guide += `   - Find any completed or active capital project.\n`;
+    guide += `   - Click the 1–5 star icons under *"Citizen Community Rating"*, write your observation, and hit **"Submit Review"**. It is saved permanently to the database under your account!\n\n`;
+
+    guide += `3. **Scanning Physical Asset QR Codes:**\n`;
+    guide += `   - Click the **"Scan QR"** button in the top search bar or menu.\n`;
+    guide += `   - Point your phone camera at an infrastructure QR tag to instantly pull up live maintenance logs, lifecycle risk, and asset specs.\n\n`;
+
+    guide += `4. **Exporting Institutional Records (CSV / PDF):**\n`;
+    guide += `   - Head to the **Reports** tab to download full audit registers in CSV or audit-ready PDF tables for executive review.\n`;
+
+    return guide;
+  }
+
+  // 4. Specific physical asset or keyword search (e.g. "road", "pothole", "bridge", "park", "water", "pipe", "light")
+  const assetKeywords = ['road', 'bridge', 'pothole', 'park', 'water', 'pipe', 'pipeline', 'drain', 'drainage', 'light', 'street', 'hospital', 'school', 'metro', 'tunnel', 'building', 'vehicle', 'pump'];
+  const matchedKeyword = assetKeywords.find(k => query.includes(k));
+
+  if (matchedKeyword) {
+    const matchingAssets = data.assets.filter(a => 
+      (a.name || '').toLowerCase().includes(matchedKeyword) ||
+      (a.type || '').toLowerCase().includes(matchedKeyword) ||
+      (a.description || '').toLowerCase().includes(matchedKeyword) ||
+      (a.location || '').toLowerCase().includes(matchedKeyword)
+    );
+
+    const matchingIssues = data.issues.filter(i => 
+      (i.title || '').toLowerCase().includes(matchedKeyword) ||
+      (i.description || '').toLowerCase().includes(matchedKeyword)
+    );
+
+    const matchingProjects = data.projects.filter(p => 
+      (p.name || '').toLowerCase().includes(matchedKeyword) ||
+      (p.description || '').toLowerCase().includes(matchedKeyword)
+    );
+
+    let res = `### 🔍 Live Database Records for **"${matchedKeyword.toUpperCase()}"**\n\n`;
+    
+    if (matchingAssets.length === 0 && matchingIssues.length === 0 && matchingProjects.length === 0) {
+      res += `*No physical assets or open issues specifically mention "${matchedKeyword}".*\n\n`;
+      res += `Total registered assets in database: **${data.assets.length}**. You can add a new asset in the Assets registry.`;
+    } else {
+      if (matchingAssets.length > 0) {
+        res += `#### **Matching Physical Assets (${matchingAssets.length}):**\n`;
+        matchingAssets.slice(0, 4).forEach(a => {
+          res += `- **${a.name}** [${a.type}]  \n`;
+          res += `  Location: \`${a.location}\` | Condition: **${a.condition}** | Risk Level: **${a.riskLevel}** | Status: \`${a.status}\`\n`;
+        });
+      }
+
+      if (matchingIssues.length > 0) {
+        res += `\n#### **Related Civic Issues & Defect Reports (${matchingIssues.length}):**\n`;
+        matchingIssues.slice(0, 3).forEach(i => {
+          res += `- **[${i.severity}] ${i.title}**  \n`;
+          res += `  Status: \`${i.status}\` | Assigned: \`${i.assignedTo || 'Field Team'}\`\n`;
+        });
+      }
+
+      if (matchingProjects.length > 0) {
+        res += `\n#### **Active Capital Projects (${matchingProjects.length}):**\n`;
+        matchingProjects.slice(0, 3).forEach(p => {
+          res += `- **${p.name}** (Progress: **${p.progressPercent}%**) — Contractor: \`${p.contractor}\`\n`;
+        });
+      }
+    }
+    return res;
+  }
+
+  // 5. User-specific / "my" data queries
   if (
     query.includes('my') || 
     query.includes('added by me') || 
@@ -190,8 +333,8 @@ const generateSmartLocalResponse = (prompt: string, data: GroundedDataset, user?
     return res;
   }
 
-  // 2. High-risk, attention required, or critical condition queries
-  if (query.includes('attention') || query.includes('high risk') || query.includes('critical') || query.includes('danger') || query.includes('condition')) {
+  // 6. High-risk, attention required, or critical condition queries
+  if (query.includes('attention') || query.includes('high risk') || query.includes('critical') || query.includes('danger') || query.includes('condition') || query.includes('hazard')) {
     const critical = data.assets.filter(a => a.riskLevel === 'High' || a.condition === 'Critical' || a.condition === 'Poor');
     const urgentIssues = data.issues.filter(i => (i.severity === 'Critical' || i.severity === 'High') && i.status !== 'Resolved');
 
@@ -219,7 +362,7 @@ const generateSmartLocalResponse = (prompt: string, data: GroundedDataset, user?
     }
 
     res += `\n> **Recommended Action for ${userRole}:** ${
-      userRole === 'Government Officer' 
+      userRole === 'Government Officer' || userRole === 'Admin'
         ? 'Dispatch rapid engineering teams and allocate emergency maintenance funds for the flagged assets above.'
         : userRole === 'Field Engineer'
         ? 'Conduct immediate non-destructive ultrasonic and structural integrity testing on high-risk assets.'
@@ -229,8 +372,8 @@ const generateSmartLocalResponse = (prompt: string, data: GroundedDataset, user?
     return res;
   }
 
-  // 3. Projects and capital expenditure queries
-  if (query.includes('project') || query.includes('delay') || query.includes('progress') || query.includes('budget') || query.includes('spent')) {
+  // 7. Projects and capital expenditure queries
+  if (query.includes('project') || query.includes('delay') || query.includes('progress') || query.includes('budget') || query.includes('spent') || query.includes('cost') || query.includes('money') || query.includes('kharcha')) {
     const delayed = data.projects.filter(p => p.progressPercent < 50 && p.status === 'Construction');
     const totalBudget = data.projects.reduce((sum, p) => sum + (Number(p.budget) || 0), 0);
     const totalSpent = data.projects.reduce((sum, p) => sum + (Number(p.spent) || 0), 0);
@@ -241,10 +384,14 @@ const generateSmartLocalResponse = (prompt: string, data: GroundedDataset, user?
     res += `- **Disbursed Expenditure:** $${(totalSpent / 1000000).toFixed(2)}M (${Math.round((totalSpent / (totalBudget || 1)) * 100)}% utilized)\n\n`;
 
     res += `#### **Project Status Breakdown:**\n`;
-    data.projects.forEach(p => {
-      res += `- **${p.name}** (${p.status})  \n`;
-      res += `  Progress: **${p.progressPercent}%** | Contractor: \`${p.contractor}\` | Budget: $${(Number(p.budget) || 0).toLocaleString()}\n`;
-    });
+    if (data.projects.length === 0) {
+      res += `*No capital projects are currently logged in the database.*\n`;
+    } else {
+      data.projects.slice(0, 5).forEach(p => {
+        res += `- **${p.name}** (${p.status})  \n`;
+        res += `  Progress: **${p.progressPercent}%** | Contractor: \`${p.contractor}\` | Budget: $${(Number(p.budget) || 0).toLocaleString()}\n`;
+      });
+    }
 
     if (delayed.length > 0) {
       res += `\n⚠️ **Delayed or Low-Progress Milestones:** ${delayed.map(d => d.name).join(', ')}`;
@@ -253,7 +400,7 @@ const generateSmartLocalResponse = (prompt: string, data: GroundedDataset, user?
     return res;
   }
 
-  // 4. Maintenance records and schedule queries
+  // 8. Maintenance records and schedule queries
   if (query.includes('maintenance') || query.includes('repair') || query.includes('schedule') || query.includes('work order')) {
     const scheduled = data.maintenance.filter(m => m.status === 'Scheduled' || m.status === 'In Progress');
     const completed = data.maintenance.filter(m => m.status === 'Completed');
@@ -281,7 +428,7 @@ const generateSmartLocalResponse = (prompt: string, data: GroundedDataset, user?
     return res;
   }
 
-  // 5. Inspections queries
+  // 9. Inspections queries
   if (query.includes('inspection') || query.includes('audit') || query.includes('finding') || query.includes('inspector')) {
     let res = `### 📋 Structural Inspections & Quality Audits\n\n`;
     res += `Total recorded inspections: **${data.inspections.length}**\n\n`;
@@ -304,7 +451,7 @@ const generateSmartLocalResponse = (prompt: string, data: GroundedDataset, user?
     return res;
   }
 
-  // 6. General synthesis / summary
+  // 10. General synthesis / summary
   return `### 🏛️ GovAsset 360 Institutional Intelligence Summary
 
 Hello **${userName}** (${userRole}). Here is the current live state of your public asset network:
@@ -314,11 +461,11 @@ Hello **${userName}** (${userRole}). Here is the current live state of your publ
 - **🏗️ Capital Projects:** **${data.projects.length}** active projects with an average milestone progress of **${Math.round(data.projects.reduce((s, p) => s + (p.progressPercent || 0), 0) / (data.projects.length || 1))}%**.
 - **🛠️ Maintenance:** **${data.maintenance.filter(m => m.status === 'Scheduled').length}** work orders scheduled.
 
-**How to interact:**
-- Ask: *"What are my assigned tasks?"* to view records linked to your user profile.
+**Suggested actions:**
+- Ask: *"What are my assigned tasks?"* to inspect records linked to your user profile.
 - Ask: *"Which assets require attention this week?"* for critical infrastructure priorities.
-- Ask: *"Show delayed projects"* for contractor performance and budget variance analysis.
-- Ask: *"Explain my access control permissions"* to inspect your authorization level.`;
+- Ask: *"Show road assets"* or *"bridge"* to search specific infrastructure items.
+- Ask: *"How do I report a civic issue?"* for reporting instructions.`;
 };
 
 // Main Exported Assistant Engine
