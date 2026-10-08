@@ -13,6 +13,8 @@
     "docker:build": "docker build -t govasset-360:latest .",
     "docker:run": "docker run -p 8080:8080 --rm govasset-360:latest",
     "docker:compose": "docker compose up -d",
+    "docker:stop": "docker compose down",
+    "docker:logs": "docker compose logs -f",
     "preview": "vite preview"
   },
   "dependencies": {
