@@ -134,6 +134,23 @@ jobs:
           docker run -d --name test-govasset -p 8080:8080 govasset-360:ci
           sleep 4
           docker exec test-govasset wget -qO- http://localhost:8080/healthz || exit 1
-          echo "✅ Container health check passed (/healthz -> 200 OK)"
+          echo "✅ Web container health check passed (/healthz -> 200 OK)"
           docker stop test-govasset
+
+      - name: Build Security Gateway API Container Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.api
+          push: false
+          tags: govasset-360-api:ci
+          load: true
+
+      - name: Test API Microservice Health Probe
+        run: |
+          docker run -d --name test-govasset-api -p 5001:5001 govasset-360-api:ci
+          sleep 5
+          docker exec test-govasset-api wget -qO- http://localhost:5001/healthz || exit 1
+          echo "✅ API microservice health check passed (/healthz -> 200 OK)"
+          docker stop test-govasset-api
 

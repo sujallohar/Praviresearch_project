@@ -17,6 +17,7 @@ dist-ssr
 test-*.cjs
 test-*.js
 .firebase/
+*.tsbuildinfo
 
 # Editor directories and files
 .vscode/*

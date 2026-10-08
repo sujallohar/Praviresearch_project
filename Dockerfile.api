@@ -1,0 +1,30 @@
+# ==============================================================================
+# GovAsset 360 Security Gateway & Microservice API Dockerfile
+# Hardened Node.js 20 Alpine Runner with Unprivileged Non-Root Execution
+# ==============================================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies strictly according to package-lock.json
+COPY package.json package-lock.json tsconfig*.json ./
+RUN npm ci
+
+# Copy server code
+COPY server ./server
+
+# Harden container file permissions
+RUN chown -R node:node /app
+
+# Switch to non-root unprivileged user
+USER node
+
+# Expose Security Gateway microservice port
+EXPOSE 5001
+
+# Kubernetes / Docker Liveness Probe
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:5001/healthz || exit 1
+
+# Start the Enterprise Security Gateway Microservice
+CMD ["npx", "tsx", "server/index.ts"]

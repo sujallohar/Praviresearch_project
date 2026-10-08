@@ -11,10 +11,14 @@
     "security:audit": "npm audit --audit-level=critical",
     "ci:verify": "npm run typecheck && npm run lint && npm run build",
     "docker:build": "docker build -t govasset-360:latest .",
+    "docker:build:api": "docker build -t govasset-360-api:latest -f Dockerfile.api .",
+    "docker:build:all": "npm run docker:build && npm run docker:build:api",
     "docker:run": "docker run -p 8080:8080 --rm govasset-360:latest",
     "docker:compose": "docker compose up -d",
     "docker:stop": "docker compose down",
     "docker:logs": "docker compose logs -f",
+    "server:dev": "tsx watch server/index.ts",
+    "server:start": "tsx server/index.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -22,7 +26,11 @@
     "@mediapipe/tasks-vision": "^1.0.1",
     "@types/leaflet": "^1.9.22",
     "clsx": "^2.1.1",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.1",
     "firebase": "^12.19.0",
+    "helmet": "^8.3.0",
     "html5-qrcode": "^2.3.8",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
@@ -34,11 +42,14 @@
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.18.4",
     "recharts": "^3.10.1",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
     "@types/node": "^24.13.3",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.18",
@@ -48,6 +59,7 @@
     "oxlint": "^1.81.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }
