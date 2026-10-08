@@ -63,7 +63,7 @@ app.use((req, res) => {
 });
 
 // 9. Start Server
-app.listen(PORT, () => {
+app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`\n🛡️  GovAsset 360 Security Gateway running on http://localhost:${PORT}`);
   console.log(`📋 Health Check Probe: http://localhost:${PORT}/healthz`);
   console.log(`📊 Prometheus Metrics: http://localhost:${PORT}/metrics`);

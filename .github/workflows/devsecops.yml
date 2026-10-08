@@ -129,13 +129,21 @@ jobs:
           tags: govasset-360:ci
           load: true
 
-      - name: Test Container Health Check Probe
+      - name: Test Web Container Health Check Probe
         run: |
           docker run -d --name test-govasset -p 8080:8080 govasset-360:ci
-          sleep 4
-          docker exec test-govasset wget -qO- http://localhost:8080/healthz || exit 1
-          echo "✅ Web container health check passed (/healthz -> 200 OK)"
-          docker stop test-govasset
+          for i in $(seq 1 15); do
+            if docker exec test-govasset wget -qO- http://127.0.0.1:8080/healthz; then
+              echo "✅ Web container health check passed (/healthz -> 200 OK)"
+              docker stop test-govasset
+              exit 0
+            fi
+            echo "Waiting for web container to be ready... ($i/15)"
+            sleep 2
+          done
+          echo "❌ Web container failed health check"
+          docker logs test-govasset
+          exit 1
 
       - name: Build Security Gateway API Container Image
         uses: docker/build-push-action@v5
@@ -149,8 +157,16 @@ jobs:
       - name: Test API Microservice Health Probe
         run: |
           docker run -d --name test-govasset-api -p 5001:5001 govasset-360-api:ci
-          sleep 5
-          docker exec test-govasset-api wget -qO- http://localhost:5001/healthz || exit 1
-          echo "✅ API microservice health check passed (/healthz -> 200 OK)"
-          docker stop test-govasset-api
+          for i in $(seq 1 15); do
+            if docker exec test-govasset-api wget -qO- http://127.0.0.1:5001/healthz; then
+              echo "✅ API microservice health check passed (/healthz -> 200 OK)"
+              docker stop test-govasset-api
+              exit 0
+            fi
+            echo "Waiting for API microservice to be ready... ($i/15)"
+            sleep 2
+          done
+          echo "❌ API microservice failed health check"
+          docker logs test-govasset-api
+          exit 1
 
