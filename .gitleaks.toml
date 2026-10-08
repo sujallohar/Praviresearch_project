@@ -1,0 +1,19 @@
+# Gitleaks Configuration for GovAsset 360 DevSecOps Pipeline
+title = "GovAsset 360 Secret Detection Rules"
+
+[extend]
+# Inherit standard Gitleaks rule definitions for AWS, GCP, GitHub, Slack, etc.
+useDefault = true
+
+[allowlist]
+description = "Allow harmless non-sensitive identifiers and public demo project strings"
+paths = [
+  '''^\.env\.example$''',
+  '''package-lock\.json$''',
+  '''dist/.*''',
+]
+regexes = [
+  '''govasset-360\.firebaseapp\.com''',
+  '''govasset-360\.web\.app''',
+  '''govasset-360''',
+]
