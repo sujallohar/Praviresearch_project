@@ -10,6 +10,9 @@
     "typecheck": "tsc -b --noEmit",
     "security:audit": "npm audit --audit-level=critical",
     "ci:verify": "npm run typecheck && npm run lint && npm run build",
+    "docker:build": "docker build -t govasset-360:latest .",
+    "docker:run": "docker run -p 8080:8080 --rm govasset-360:latest",
+    "docker:compose": "docker compose up -d",
     "preview": "vite preview"
   },
   "dependencies": {
