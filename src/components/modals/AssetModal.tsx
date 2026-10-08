@@ -4,6 +4,8 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/fi
 import { db } from '../../lib/firebase';
 import type { Asset, AssetState } from '../../types';
 import { Building2, MapPin, ShieldAlert, DollarSign, User, FileText, Loader2, Navigation } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { recordAuditEvent } from '../../utils/cryptoAudit';
 
 interface AssetModalProps {
   isOpen: boolean;
@@ -46,6 +48,7 @@ export const AssetModal: React.FC<AssetModalProps> = ({
   assetToEdit,
   onSuccess
 }) => {
+  const { currentUser, role } = useAuth();
   const isEditing = Boolean(assetToEdit?.id);
 
   const [name, setName] = useState('');
@@ -143,10 +146,42 @@ export const AssetModal: React.FC<AssetModalProps> = ({
 
       if (isEditing && assetToEdit?.id) {
         await updateDoc(doc(db, 'assets', assetToEdit.id), payload);
+        // Cryptographic Audit Block
+        await recordAuditEvent({
+          actorId: currentUser?.uid || 'staff-uid',
+          actorEmail: currentUser?.email || 'staff@gov.in',
+          actorRole: role || 'Government Officer',
+          action: 'ASSET_UPDATED',
+          targetId: assetToEdit.id,
+          targetType: 'Physical Infrastructure Asset',
+          details: {
+            name: payload.name,
+            type: payload.type,
+            department: payload.departmentId,
+            condition: payload.condition,
+            estimatedValue: payload.estimatedValue
+          }
+        });
       } else {
-        await addDoc(collection(db, 'assets'), {
+        const docRef = await addDoc(collection(db, 'assets'), {
           ...payload,
           createdAt: serverTimestamp()
+        });
+        // Cryptographic Audit Block
+        await recordAuditEvent({
+          actorId: currentUser?.uid || 'staff-uid',
+          actorEmail: currentUser?.email || 'staff@gov.in',
+          actorRole: role || 'Government Officer',
+          action: 'ASSET_CREATED',
+          targetId: docRef.id,
+          targetType: 'Physical Infrastructure Asset',
+          details: {
+            name: payload.name,
+            type: payload.type,
+            department: payload.departmentId,
+            condition: payload.condition,
+            estimatedValue: payload.estimatedValue
+          }
         });
       }
 

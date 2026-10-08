@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   BarChart3, PieChart, 
   AlertTriangle, Wrench, Download, FileText, 
-  DollarSign, TrendingUp, Filter, RefreshCw, Sparkles, Clock, ArrowUpRight
+  DollarSign, TrendingUp, Filter, RefreshCw, Sparkles, Clock, ArrowUpRight, ShieldCheck
 } from 'lucide-react';
 import { db } from '../lib/firebase';
 import { collection, getDocs } from 'firebase/firestore';
@@ -16,6 +16,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { calculatePortfolioPredictiveMetrics } from '../utils/predictiveEngine';
 import { downloadBlob, downloadCsv } from '../utils/fileDownloader';
+import { AuditLedgerModal } from '../components/modals/AuditLedgerModal';
 
 const COLORS = ['#3b82f6', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
 
@@ -27,6 +28,7 @@ export const Reports: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'visuals' | 'tables' | 'predictive'>('visuals');
   const [departmentFilter, setDepartmentFilter] = useState('All');
+  const [isAuditLedgerOpen, setIsAuditLedgerOpen] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -245,6 +247,13 @@ export const Reports: React.FC = () => {
             className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
           >
             <Download className="w-4 h-4" /> Export PDF
+          </button>
+          <button 
+            onClick={() => setIsAuditLedgerOpen(true)} 
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold shadow-sm transition-colors whitespace-nowrap flex-shrink-0"
+            title="Inspect SHA-256 Tamper-Evident Cryptographic Audit Ledger"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-400" /> Audit Ledger
           </button>
         </div>
       </div>
@@ -699,6 +708,12 @@ export const Reports: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* Cryptographic Tamper-Evident SHA-256 Audit Ledger Modal */}
+      <AuditLedgerModal
+        isOpen={isAuditLedgerOpen}
+        onClose={() => setIsAuditLedgerOpen(false)}
+      />
     </div>
   );
 };

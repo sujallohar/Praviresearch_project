@@ -97,3 +97,19 @@ export interface CitizenFeedback {
   updatedAt: any;
 }
 
+export interface AuditBlock {
+  id?: string;
+  index: number;
+  timestamp: string;
+  actorId: string;
+  actorEmail?: string;
+  actorRole: string;
+  action: 'ROLE_APPROVED' | 'ROLE_REJECTED' | 'ASSET_CREATED' | 'ASSET_UPDATED' | 'ASSET_DELETED' | 'PROJECT_CREATED' | 'PROJECT_UPDATED' | 'BUDGET_DISBURSED' | 'ISSUE_CREATED' | 'ISSUE_RESOLVED' | 'SYSTEM_INITIALIZED';
+  targetId: string;
+  targetType: string;
+  details: Record<string, any>;
+  previousHash: string;
+  hash: string;
+}
+
+

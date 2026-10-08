@@ -64,5 +64,13 @@ service cloud.firestore {
       );
       allow delete: if isSuperAdmin();
     }
+
+    // Cryptographic Tamper-Evident Audit Ledger (WORM - Write Once, Read Many):
+    // Public transparency auditability; append-only creation; NO ONE can ever modify or delete an existing block!
+    match /auditLedger/{blockId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if false; // Strict immutable guarantee
+    }
   }
 }

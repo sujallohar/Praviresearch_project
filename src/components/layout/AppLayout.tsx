@@ -19,6 +19,7 @@ import { QrScannerModal } from '../scanner/QrScannerModal';
 import { RoleRequestsManagerModal } from '../modals/RoleRequestsManagerModal';
 import { RequestRoleModal } from '../modals/RequestRoleModal';
 import { PwaInstallPrompt } from '../common/PwaInstallPrompt';
+import { AuditLedgerModal } from '../modals/AuditLedgerModal';
 
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -52,6 +53,7 @@ export const AppLayout: React.FC = () => {
   const [issueModalOpen, setIssueModalOpen] = useState(false);
   const [roleRequestsModalOpen, setRoleRequestsModalOpen] = useState(false);
   const [requestRoleModalOpen, setRequestRoleModalOpen] = useState(false);
+  const [auditLedgerOpen, setAuditLedgerOpen] = useState(false);
   const [prefilledInspection, setPrefilledInspection] = useState<any>(null);
   const [prefilledIssue, setPrefilledIssue] = useState<any>(null);
 
@@ -221,6 +223,14 @@ export const AppLayout: React.FC = () => {
           >
             <Download className="w-3 h-3 text-white" />
             Install Mobile App
+          </button>
+          <button
+            onClick={() => setAuditLedgerOpen(true)}
+            className="w-full py-1.5 px-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/80 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors mt-1.5 shadow-2xs"
+            title="Inspect SHA-256 Tamper-Evident Cryptographic Audit Ledger"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            Audit Ledger (SHA-256)
           </button>
         </div>
 
@@ -413,6 +423,16 @@ export const AppLayout: React.FC = () => {
                 <span className="hidden xl:inline">Install App</span>
               </button>
 
+              {/* Cryptographic Audit Ledger Button (SecOps) */}
+              <button
+                onClick={() => setAuditLedgerOpen(true)}
+                className="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
+                title="Inspect Cryptographic Tamper-Evident Audit Ledger (SHA-256)"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden md:inline">Audit Ledger</span>
+              </button>
+
               {/* Notifications Popover */}
               <NotificationPopover onOpenRoleRequests={() => setRoleRequestsModalOpen(true)} />
             </div>
@@ -499,6 +519,12 @@ export const AppLayout: React.FC = () => {
       <RequestRoleModal
         isOpen={requestRoleModalOpen}
         onClose={() => setRequestRoleModalOpen(false)}
+      />
+
+      {/* Cryptographic Tamper-Evident SHA-256 Audit Ledger Modal */}
+      <AuditLedgerModal
+        isOpen={auditLedgerOpen}
+        onClose={() => setAuditLedgerOpen(false)}
       />
 
       {/* Progressive Web App Install Engine & Banner */}

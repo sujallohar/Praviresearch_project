@@ -7,6 +7,7 @@ import {
 import { collection, onSnapshot, doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth, type UserRole, SUPER_ADMIN_EMAIL } from '../../context/AuthContext';
+import { recordAuditEvent } from '../../utils/cryptoAudit';
 
 interface RoleRequestItem {
   id: string;
@@ -121,6 +122,23 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
         }, { merge: true });
       }
 
+      // 3. Cryptographic Tamper-Evident SHA-256 Audit Log
+      await recordAuditEvent({
+        actorId: currentUser?.uid || 'super-admin',
+        actorEmail: currentUser?.email || SUPER_ADMIN_EMAIL,
+        actorRole: 'Super Admin',
+        action: 'ROLE_APPROVED',
+        targetId: req.userId || req.id,
+        targetType: 'User Authorization',
+        details: {
+          userName: req.userName,
+          userEmail: req.userEmail,
+          department: req.department,
+          grantedRole: approvedRole,
+          reviewer: SUPER_ADMIN_EMAIL
+        }
+      });
+
       setGrantedMessage(`Authority granted! ${req.userName} is now approved as a ${approvedRole}.`);
       setTimeout(() => setGrantedMessage(null), 4000);
     } catch (err: any) {
@@ -143,6 +161,22 @@ export const RoleRequestsManagerModal: React.FC<RoleRequestsManagerModalProps> =
         status: 'Rejected',
         reviewedAt: serverTimestamp(),
         reviewedBy: currentUser?.email || SUPER_ADMIN_EMAIL
+      });
+
+      // Cryptographic Tamper-Evident SHA-256 Audit Log
+      await recordAuditEvent({
+        actorId: currentUser?.uid || 'super-admin',
+        actorEmail: currentUser?.email || SUPER_ADMIN_EMAIL,
+        actorRole: 'Super Admin',
+        action: 'ROLE_REJECTED',
+        targetId: req.userId || req.id,
+        targetType: 'User Authorization',
+        details: {
+          userName: req.userName,
+          userEmail: req.userEmail,
+          department: req.department,
+          rejectedRole: req.requestedRole
+        }
       });
     } catch (err: any) {
       console.error('Failed to decline role:', err);
